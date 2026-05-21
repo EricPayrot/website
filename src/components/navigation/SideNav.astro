@@ -1,0 +1,105 @@
+---
+import { siteName } from "../../config/site";
+
+const pathname = Astro.url.pathname.replace(/\/$/, "") || "/";
+const matchWorks = (p: string) => p.startsWith("/works") || p.startsWith("/artwork");
+const nav = [
+  { href: "/", label: "Home", match: (p: string) => p === "/" },
+  { href: "/works", label: "Works", match: matchWorks },
+];
+---
+
+<aside class="nav-rail" aria-label="Site">
+  <div class="nav-rail__brand">
+    <a href="/">{siteName}</a>
+  </div>
+  <nav class="nav-rail__links" aria-label="Primary">
+    {
+      nav.map((item) => {
+        const active = item.match(pathname);
+        return (
+          <a
+            href={item.href}
+            class:list={[{ "is-active": active }]}
+            aria-current={active ? "page" : undefined}
+            data-astro-prefetch
+          >
+            {item.label}
+          </a>
+        );
+      })
+    }
+  </nav>
+</aside>
+
+<style>
+  .nav-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+    border-right: 1px solid var(--color-border);
+    background: color-mix(in oklab, var(--color-bg) 92%, var(--color-border));
+    min-height: 100%;
+  }
+
+  .nav-rail__brand a {
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    color: var(--color-text);
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .nav-rail__links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .nav-rail__links a {
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--color-muted);
+    padding: var(--space-sm) var(--space-sm);
+    border-radius: var(--radius);
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .nav-rail__links a:hover {
+    color: var(--color-text);
+    background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  }
+
+  .nav-rail__links a.is-active {
+    color: var(--color-text);
+    background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  }
+
+  @media (max-width: 767px) {
+    .nav-rail {
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      min-height: unset;
+      border-right: none;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .nav-rail__brand {
+      flex: 1 1 auto;
+    }
+
+    .nav-rail__links {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      width: 100%;
+    }
+  }
+</style>

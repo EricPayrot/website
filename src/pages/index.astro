@@ -1,0 +1,95 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { artist, DEFAULT_DESCRIPTION, siteName } from "../config/site";
+import heroLandscape from "../assets/placeholders/hero-landscape.svg";
+
+const personLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: artist.name,
+  url: artist.url,
+  ...(artist.sameAs.length ? { sameAs: artist.sameAs } : {}),
+};
+---
+
+<BaseLayout
+  title={siteName}
+  description={DEFAULT_DESCRIPTION}
+  canonicalPath="/"
+  jsonLd={personLd}
+>
+  <section class="hero" aria-label="Introduction">
+    <div class="hero__media">
+      <Image
+        src={heroLandscape}
+        alt="Wide horizontal placeholder in flat deep blue — replace with your own hero image"
+        width={1600}
+        height={900}
+        sizes="(max-width: 900px) 100vw, 75vw"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+        class="hero__image"
+      />
+    </div>
+    <div class="hero__copy">
+      <h1 class="hero__title">{siteName}</h1>
+      <p class="hero__lede">
+        Replace this block with your artist statement or a short greeting. The wide image is a
+        simple placeholder — swap it for a studio shot or a key work in <code
+          >src/assets/placeholders/hero-landscape.svg</code
+        > (or point the import in <code>index.astro</code> at any image under <code>src/assets/</code>).
+      </p>
+      <p>
+        <a href="/works" data-astro-prefetch>View all images</a>
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    display: grid;
+    gap: var(--space-xl);
+    align-items: center;
+  }
+
+  @media (min-width: 900px) {
+    .hero {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    }
+  }
+
+  .hero__media {
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    background: color-mix(in oklab, var(--color-border) 20%, transparent);
+  }
+
+  .hero__image {
+    width: 100%;
+    height: auto;
+    display: block;
+    vertical-align: middle;
+  }
+
+  .hero__title {
+    font-size: clamp(2rem, 4.5vw, 2.75rem);
+    margin: 0 0 var(--space-md);
+    line-height: 1.15;
+  }
+
+  .hero__lede {
+    font-size: 1.1rem;
+    color: var(--color-muted);
+    max-width: 36rem;
+    margin: 0 0 var(--space-lg);
+    line-height: 1.6;
+  }
+
+  code {
+    font-size: 0.88em;
+  }
+</style>

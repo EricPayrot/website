@@ -1,0 +1,5 @@
+/** Truncate plain text for meta descriptions (does not strip HTML). */
+export function truncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+}

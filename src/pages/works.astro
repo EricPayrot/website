@@ -1,0 +1,44 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GalleryImageTile from "../components/gallery/GalleryImageTile.astro";
+
+const description =
+  "Full image gallery across all published works — landscape, portrait, and square placeholders.";
+
+const works = await getCollection("works", ({ data }) => !data.draft);
+const sorted = [...works].sort(
+  (a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0),
+);
+
+const tiles = sorted.flatMap((work) =>
+  work.data.images.map((image, imageIndex) => ({
+    workSlug: work.slug,
+    workTitle: work.data.title,
+    imageIndex,
+    src: image.src,
+    alt: image.alt,
+  })),
+);
+---
+
+<BaseLayout title="Works" description={description} canonicalPath="/works">
+  <h1 class="page-title">Works</h1>
+  <p class="lede muted">
+    Every image from every published work appears below. Select any tile to open the artwork viewer.
+  </p>
+
+  <div class="all-images-grid">
+    {
+      tiles.map((tile) => (
+        <GalleryImageTile
+          workSlug={tile.workSlug}
+          workTitle={tile.workTitle}
+          imageIndex={tile.imageIndex}
+          src={tile.src}
+          alt={tile.alt}
+        />
+      ))
+    }
+  </div>
+</BaseLayout>

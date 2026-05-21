@@ -1,0 +1,216 @@
+---
+import { Image } from "astro:assets";
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  entry: CollectionEntry<"works">;
+  imageIndex: number;
+}
+
+const { entry, imageIndex } = Astro.props;
+
+const img = entry.data.images[imageIndex];
+if (!img) {
+  throw new Error(`Missing image at index ${imageIndex} for ${entry.slug}`);
+}
+
+const total = entry.data.images.length;
+---
+
+<div class="artwork-viewer">
+  <div class="artwork-viewer__stage">
+    <div class="artwork-viewer__frame">
+      <Image
+        src={img.src}
+        alt={img.alt}
+        sizes="(max-width: 900px) 100vw, 72vw"
+        widths={[640, 960, 1280, 1600]}
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+        class="artwork-viewer__img"
+      />
+    </div>
+    {
+      total > 1 && (
+        <div class="artwork-viewer__strip" role="navigation" aria-label={`Images for “${entry.data.title}”`}>
+          {entry.data.images.map((thumb, i) => (
+            <a
+              href={`/artwork/${entry.slug}/${i}`}
+              class:list={["artwork-viewer__thumb", { "is-active": i === imageIndex }]}
+              data-astro-prefetch
+              aria-current={i === imageIndex ? "true" : undefined}
+            >
+              <Image
+                src={thumb.src}
+                alt=""
+                width={88}
+                height={88}
+                sizes="88px"
+                loading="lazy"
+                class="artwork-viewer__thumb-img"
+              />
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+
+  <aside class="artwork-viewer__aside">
+    <p class="artwork-viewer__breadcrumb muted">
+      <a href="/works">Works</a>
+      <span aria-hidden="true"> / </span>
+      <span>{entry.data.title}</span>
+    </p>
+    <h1 class="artwork-viewer__title">{entry.data.title}</h1>
+    {total > 1 && (
+      <p class="artwork-viewer__index muted">
+        Image {imageIndex + 1} of {total}
+      </p>
+    )}
+    <p class="artwork-viewer__description">{entry.data.description}</p>
+    <dl class="artwork-viewer__dl">
+      {
+        entry.data.year != null && (
+          <>
+            <dt>Year</dt>
+            <dd>{entry.data.year}</dd>
+          </>
+        )
+      }
+      {
+        entry.data.medium && (
+          <>
+            <dt>Medium</dt>
+            <dd>{entry.data.medium}</dd>
+          </>
+        )
+      }
+      {
+        entry.data.dimensions && (
+          <>
+            <dt>Dimensions</dt>
+            <dd>{entry.data.dimensions}</dd>
+          </>
+        )
+      }
+      {
+        img.caption && (
+          <>
+            <dt>Caption</dt>
+            <dd>{img.caption}</dd>
+          </>
+        )
+      }
+    </dl>
+    <div class="prose artwork-viewer__prose">
+      <slot />
+    </div>
+  </aside>
+</div>
+
+<style>
+  .artwork-viewer {
+    display: grid;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+
+  @media (min-width: 900px) {
+    .artwork-viewer {
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+    }
+  }
+
+  .artwork-viewer__frame {
+    background: color-mix(in oklab, var(--color-border) 25%, var(--color-bg));
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 12rem;
+  }
+
+  .artwork-viewer__img {
+    width: 100%;
+    height: auto;
+    max-height: min(85vh, 920px);
+    object-fit: contain;
+    display: block;
+  }
+
+  .artwork-viewer__strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+  }
+
+  .artwork-viewer__thumb {
+    display: block;
+    padding: 2px;
+    border-radius: var(--radius);
+    border: 2px solid transparent;
+    line-height: 0;
+  }
+
+  .artwork-viewer__thumb.is-active {
+    border-color: var(--color-accent);
+  }
+
+  .artwork-viewer__thumb-img {
+    width: 5.5rem;
+    height: 5.5rem;
+    object-fit: cover;
+    border-radius: calc(var(--radius) - 2px);
+    display: block;
+  }
+
+  .artwork-viewer__aside {
+    position: sticky;
+    top: var(--space-md);
+  }
+
+  .artwork-viewer__breadcrumb a {
+    text-decoration: none;
+  }
+
+  .artwork-viewer__title {
+    font-size: 1.5rem;
+    margin: var(--space-sm) 0 var(--space-xs);
+  }
+
+  .artwork-viewer__index {
+    margin: 0 0 var(--space-md);
+  }
+
+  .artwork-viewer__description {
+    margin: 0 0 var(--space-md);
+    line-height: 1.55;
+  }
+
+  .artwork-viewer__dl {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-xs) var(--space-md);
+    margin: 0 0 var(--space-lg);
+    font-size: 0.95rem;
+  }
+
+  .artwork-viewer__dl dt {
+    color: var(--color-muted);
+    font-weight: 500;
+  }
+
+  .artwork-viewer__dl dd {
+    margin: 0;
+  }
+
+  .artwork-viewer__prose {
+    max-width: none;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+  }
+</style>
