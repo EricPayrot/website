@@ -1,6 +1,8 @@
 ---
 import { Image } from "astro:assets";
 import type { CollectionEntry } from "astro:content";
+import { labelForCollectionSlug } from "../../config/facet-labels";
+import { getFacet } from "../../utils/facets";
 
 interface Props {
   entry: CollectionEntry<"works">;
@@ -8,6 +10,8 @@ interface Props {
 }
 
 const { entry, imageIndex } = Astro.props;
+
+const collectionTags = getFacet(entry, "collections");
 
 const img = entry.data.images[imageIndex];
 if (!img) {
@@ -70,6 +74,27 @@ const total = entry.data.images.length;
       </p>
     )}
     <p class="artwork-viewer__description">{entry.data.description}</p>
+
+    {
+      collectionTags.length > 0 && (
+        <div class="artwork-viewer__collections">
+          <h2 class="artwork-viewer__facet-heading">Collections</h2>
+          <ul class="artwork-viewer__facet-list">
+            {collectionTags.map((facetSlug) => (
+              <li>
+                <a
+                  href={`/collections/${encodeURIComponent(facetSlug)}`}
+                  data-astro-prefetch
+                >
+                  {labelForCollectionSlug(facetSlug)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
     <dl class="artwork-viewer__dl">
       {
         entry.data.year != null && (
@@ -189,6 +214,43 @@ const total = entry.data.images.length;
   .artwork-viewer__description {
     margin: 0 0 var(--space-md);
     line-height: 1.55;
+  }
+
+  .artwork-viewer__facet-heading {
+    margin: 0 0 var(--space-xs);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
+  }
+
+  .artwork-viewer__collections {
+    margin-bottom: var(--space-lg);
+  }
+
+  .artwork-viewer__facet-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .artwork-viewer__facet-list a {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.9rem;
+    text-decoration: none;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: color-mix(in oklab, var(--color-bg) 90%, var(--color-border));
+  }
+
+  .artwork-viewer__facet-list a:hover,
+  .artwork-viewer__facet-list a:focus-visible {
+    border-color: var(--color-accent);
   }
 
   .artwork-viewer__dl {

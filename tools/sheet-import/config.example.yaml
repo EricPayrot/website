@@ -1,0 +1,46 @@
+# Copy to config.yaml (gitignored — do not commit secrets).
+
+repo_root: "../../"
+
+# Recommended: export your spreadsheet as CSV (File → Download → Comma-separated values)
+# and set the path here. Paths are relative to this file unless absolute.
+csv_path: "./works-export.csv"
+
+# Optional: live Google Sheets (omit or remove csv_path to use API — needs credentials.json)
+# spreadsheet_id: "YOUR_SPREADSHEET_ID_HERE"
+# range: "Sheet1!A1:ZZ999"
+# credentials_path: "./credentials.json"
+# Or: export GOOGLE_APPLICATION_CREDENTIALS=/abs/path/to-service-account.json
+
+assets_subdirectory: "src/assets/works/sheet-linked"
+content_subdirectory: "src/content/works"
+
+# Spreadsheet headers (row 1) — values must match your CSV / sheet exactly.
+# One row = one artwork = one linked image (`path`). Slug comes from `file` stem.
+columns:
+  publish: publish
+  file: file
+  path: path
+  alt: alt
+  title: title
+  description: description
+  year: year
+  medium: medium
+  dimensions: dimensions
+
+  collections: collections
+  colors: colors
+  elements: elements
+  shapes: shapes
+  motion: motion
+  influences: influences
+
+  # --- optional extensions (omit key or leave value empty to disable) ---
+  body: ""
+  keywords: ""
+  draft: ""
+  featured: ""
+  date: ""
+  og_image: ""
+
+# Rows skipped when `publish` is blank. Other optional cells can be empty.

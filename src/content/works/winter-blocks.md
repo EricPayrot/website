@@ -7,6 +7,10 @@ dimensions: "50 × 50 cm"
 draft: false
 featured: false
 date: 2023-11-02
+facets:
+  collections:
+    - color-fields
+    - archive
 images:
   - src: ../../assets/placeholders/square-ochre.svg
     alt: "Flat placeholder — square format in golden ochre"

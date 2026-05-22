@@ -11,6 +11,10 @@ keywords:
 draft: false
 featured: true
 date: 2024-06-01
+facets:
+  collections:
+    - studio-samples
+    - color-fields
 images:
   - src: ../../assets/placeholders/landscape-terracotta.svg
     alt: "Flat placeholder — wide landscape format in warm terracotta"

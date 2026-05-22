@@ -1,0 +1,78 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GalleryImageTile from "../../components/gallery/GalleryImageTile.astro";
+import { labelForCollectionSlug } from "../../config/facet-labels";
+import { allFacetSlugs, filterWorksByFacet } from "../../utils/facets";
+import { buildImageTiles, sortPublishedWorks } from "../../utils/gallery-tiles";
+
+export async function getStaticPaths() {
+  const works = sortPublishedWorks(await getCollection("works"));
+  const slugs = allFacetSlugs(works, "collections");
+  return slugs.map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error("Missing collection slug");
+}
+
+const works = sortPublishedWorks(await getCollection("works"));
+const inCollection = filterWorksByFacet(works, "collections", slug);
+const tiles = buildImageTiles(inCollection);
+const label = labelForCollectionSlug(slug);
+
+const description = `Images from works in “${label}”.`;
+---
+
+<BaseLayout
+  title={label}
+  description={description}
+  canonicalPath={`/collections/${slug}`}
+>
+  <nav class="collection-nav muted" aria-label="Breadcrumb">
+    <a href="/collections">Collections</a>
+    <span aria-hidden="true"> / </span>
+    <span>{label}</span>
+  </nav>
+
+  <h1 class="page-title">{label}</h1>
+  <p class="lede muted">
+    Every image from works tagged with <code>facets.collections: {slug}</code> ({inCollection.length}{" "}
+    work{inCollection.length === 1 ? "" : "s"}).
+  </p>
+
+  {
+    tiles.length === 0 ? (
+      <p class="muted">No images in this collection.</p>
+    ) : (
+      <div class="all-images-grid">
+        {tiles.map((tile) => (
+          <GalleryImageTile
+            workSlug={tile.workSlug}
+            workTitle={tile.workTitle}
+            imageIndex={tile.imageIndex}
+            src={tile.src}
+            alt={tile.alt}
+          />
+        ))}
+      </div>
+    )
+  }
+</BaseLayout>
+
+<style>
+  code {
+    font-size: 0.9em;
+  }
+
+  .collection-nav {
+    margin-bottom: var(--space-md);
+    font-size: 0.95rem;
+  }
+
+  .collection-nav a {
+    text-decoration: none;
+  }
+</style>

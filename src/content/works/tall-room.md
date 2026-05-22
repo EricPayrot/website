@@ -7,6 +7,10 @@ dimensions: "180 × 120 cm"
 draft: false
 featured: false
 date: 2024-05-12
+facets:
+  collections:
+    - vertical-series
+    - studio-samples
 images:
   - src: ../../assets/placeholders/portrait-orchid.svg
     alt: "Flat placeholder — tall portrait format in muted violet"

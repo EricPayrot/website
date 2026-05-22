@@ -1,12 +1,20 @@
 ---
+import { getCollection } from "astro:content";
 import { siteName } from "../../config/site";
+import { labelForCollectionSlug } from "../../config/facet-labels";
+import { allFacetSlugs } from "../../utils/facets";
+import { sortPublishedWorks } from "../../utils/gallery-tiles";
 
 const pathname = Astro.url.pathname.replace(/\/$/, "") || "/";
-const matchWorks = (p: string) => p.startsWith("/works") || p.startsWith("/artwork");
-const nav = [
-  { href: "/", label: "Home", match: (p: string) => p === "/" },
-  { href: "/works", label: "Works", match: matchWorks },
-];
+
+const matchWorks = (p: string) =>
+  p.startsWith("/works") || p.startsWith("/artwork");
+const matchCollectionIndex = (p: string) => p === "/collections";
+const matchCollectionChild = (p: string, slug: string) =>
+  p === `/collections/${slug}`;
+
+const works = sortPublishedWorks(await getCollection("works"));
+const collectionSlugs = allFacetSlugs(works, "collections");
 ---
 
 <aside class="nav-rail" aria-label="Site">
@@ -14,21 +22,61 @@ const nav = [
     <a href="/">{siteName}</a>
   </div>
   <nav class="nav-rail__links" aria-label="Primary">
-    {
-      nav.map((item) => {
-        const active = item.match(pathname);
-        return (
-          <a
-            href={item.href}
-            class:list={[{ "is-active": active }]}
-            aria-current={active ? "page" : undefined}
-            data-astro-prefetch
-          >
-            {item.label}
-          </a>
-        );
-      })
-    }
+    <a
+      href="/"
+      class:list={[{ "is-active": pathname === "/" }]}
+      aria-current={pathname === "/" ? "page" : undefined}
+      data-astro-prefetch
+    >
+      Home
+    </a>
+    <a
+      href="/works"
+      class:list={[{ "is-active": matchWorks(pathname) }]}
+      aria-current={matchWorks(pathname) ? "page" : undefined}
+      data-astro-prefetch
+    >
+      Works
+    </a>
+
+    <div class="nav-rail__group" role="group" aria-labelledby="nav-collection-heading">
+      <a
+        id="nav-collection-heading"
+        href="/collections"
+        class:list={[
+          "nav-rail__group-heading",
+          { "is-active": matchCollectionIndex(pathname) },
+        ]}
+        aria-current={
+          matchCollectionIndex(pathname) ? "page" : undefined
+        }
+        data-astro-prefetch
+      >
+        Collection
+      </a>
+      {
+        collectionSlugs.length > 0 && (
+          <ul class="nav-rail__sub">
+            {collectionSlugs.map((slug) => {
+              const href = `/collections/${slug}`;
+              const active = matchCollectionChild(pathname, slug);
+              return (
+                <li>
+                  <a
+                    href={href}
+                    class:list={[{ "is-active": active }]}
+                    aria-current={active ? "page" : undefined}
+                    data-astro-prefetch
+                  >
+                    {labelForCollectionSlug(slug)}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      }
+    </div>
   </nav>
 </aside>
 
@@ -59,7 +107,7 @@ const nav = [
     gap: var(--space-xs);
   }
 
-  .nav-rail__links a {
+  .nav-rail__links > a {
     text-decoration: none;
     font-weight: 600;
     color: var(--color-muted);
@@ -70,12 +118,73 @@ const nav = [
     align-items: center;
   }
 
-  .nav-rail__links a:hover {
+  .nav-rail__links > a:hover {
     color: var(--color-text);
     background: color-mix(in oklab, var(--color-accent) 12%, transparent);
   }
 
-  .nav-rail__links a.is-active {
+  .nav-rail__links > a.is-active {
+    color: var(--color-text);
+    background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  }
+
+  .nav-rail__group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: var(--space-sm);
+    margin-top: var(--space-xs);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .nav-rail__group-heading {
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--color-muted);
+    padding: var(--space-sm) var(--space-sm);
+    border-radius: var(--radius);
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .nav-rail__group-heading:hover {
+    color: var(--color-text);
+    background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  }
+
+  .nav-rail__group-heading.is-active {
+    color: var(--color-text);
+    background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  }
+
+  .nav-rail__sub {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 var(--space-xs) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-rail__sub a {
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--color-muted);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius);
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .nav-rail__sub a:hover {
+    color: var(--color-text);
+    background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  }
+
+  .nav-rail__sub a.is-active {
     color: var(--color-text);
     background: color-mix(in oklab, var(--color-accent) 18%, transparent);
   }
@@ -83,7 +192,7 @@ const nav = [
   @media (max-width: 767px) {
     .nav-rail {
       flex-direction: row;
-      align-items: center;
+      align-items: flex-start;
       flex-wrap: wrap;
       gap: var(--space-md);
       min-height: unset;
@@ -99,7 +208,36 @@ const nav = [
       flex-direction: row;
       flex-wrap: wrap;
       gap: var(--space-sm);
+      align-items: center;
       width: 100%;
+    }
+
+    .nav-rail__group {
+      flex: 1 1 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+      border-left: none;
+      gap: var(--space-sm);
+    }
+
+    .nav-rail__group-heading {
+      flex: 0 0 auto;
+    }
+
+    .nav-rail__sub {
+      flex: 1 1 auto;
+      flex-direction: row;
+      flex-wrap: wrap;
+      padding: 0;
+      gap: var(--space-xs);
+    }
+
+    .nav-rail__sub li {
+      flex: 0 0 auto;
     }
   }
 </style>

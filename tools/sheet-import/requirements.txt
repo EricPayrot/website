@@ -1,0 +1,7 @@
+# CSV workflow (recommended): PyYAML only. Google libs are unused if you never call the API.
+PyYAML>=6.0.1
+
+# Optional — Google Sheets API (service account, read-only)
+google-api-python-client>=2.130.0
+google-auth>=2.29.0
+google-auth-httplib2>=0.2.0

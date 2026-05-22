@@ -2,24 +2,13 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import GalleryImageTile from "../components/gallery/GalleryImageTile.astro";
+import { buildImageTiles, sortPublishedWorks } from "../utils/gallery-tiles";
 
 const description =
   "Full image gallery across all published works — landscape, portrait, and square placeholders.";
 
-const works = await getCollection("works", ({ data }) => !data.draft);
-const sorted = [...works].sort(
-  (a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0),
-);
-
-const tiles = sorted.flatMap((work) =>
-  work.data.images.map((image, imageIndex) => ({
-    workSlug: work.slug,
-    workTitle: work.data.title,
-    imageIndex,
-    src: image.src,
-    alt: image.alt,
-  })),
-);
+const works = sortPublishedWorks(await getCollection("works"));
+const tiles = buildImageTiles(works);
 ---
 
 <BaseLayout title="Works" description={description} canonicalPath="/works">
