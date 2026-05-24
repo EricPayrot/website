@@ -212,6 +212,38 @@ const heroImage =
     gap: 0;
   }
 
+  /* Pre-rendered next/previous spread (under peeling half; shows through during flip) */
+  .book-flip__rear.book-flip__spread {
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .book-flip__half--rear-passive {
+    pointer-events: none !important;
+    cursor: default !important;
+  }
+
+  .book-flip__half--rear-passive.book-flip__half--clickable:hover {
+    box-shadow: none;
+  }
+
+  /* Make the peeled column transparent so the rear layer reads through */
+  .book-flip__half--peel-slot-forward.book-flip__half--right {
+    background: transparent !important;
+  }
+
+  .book-flip__half--peel-slot-forward.book-flip__half--right .book-flip__sheet {
+    opacity: 0 !important;
+  }
+
+  .book-flip__half--peel-slot-back.book-flip__half--left {
+    background: transparent !important;
+  }
+
+  .book-flip__half--peel-slot-back.book-flip__half--left .book-flip__sheet {
+    opacity: 0 !important;
+  }
+
   .book-flip__half {
     flex: 1 1 0;
     min-width: 0;

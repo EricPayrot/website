@@ -49,7 +49,6 @@ export function mountBookFlip(
 
   let spreadIndex = 0;
   let animating = false;
-  let midTimer: ReturnType<typeof setTimeout> | undefined;
   let endTimer: ReturnType<typeof setTimeout> | undefined;
 
   root.innerHTML = "";
@@ -134,28 +133,35 @@ export function mountBookFlip(
     return spreadIndex > 0;
   }
 
-  function innerSpreadHtml(): string {
-    const left = getLeftPage(spreadIndex);
-    const right = getRightPage(spreadIndex);
+  function innerSpreadHtml(idx: number, passiveSpread = false): string {
+    const left = getLeftPage(idx);
+    const right = getRightPage(idx);
     const leftHtml = left
       ? innerPageSheet(left, "interior-left")
       : blankPageHtml();
     const rightLayout =
-      spreadIndex === 0 && right ? "cover" : ("interior-right" as const);
+      idx === 0 && right ? "cover" : ("interior-right" as const);
     const rightHtml = right
       ? innerPageSheet(right, rightLayout)
       : blankPageHtml();
-    const leftA11y =
-      left && canGoBack() ? ' aria-label="Turn page back"' : "";
-    const rightA11y =
-      right && canGoForward() ? ' aria-label="Turn page forward"' : "";
+
+    const leftNav = !!(left && idx > 0 && !passiveSpread);
+    const rightNav = !!(right && idx < maxSpreadIndex() && !passiveSpread);
+
+    const leftA11y = leftNav ? ' aria-label="Turn page back"' : "";
+    const rightA11y = rightNav ? ' aria-label="Turn page forward"' : "";
+    const leftRole = passiveSpread ? ' role="presentation"' : ' role="button"';
+    const rightRole = passiveSpread ? ' role="presentation"' : ' role="button"';
+
+    const leftPassiveCls = passiveSpread ? " book-flip__half--rear-passive" : "";
+    const rightPassiveCls = passiveSpread ? " book-flip__half--rear-passive" : "";
 
     return `
-      <div class="book-flip__half book-flip__half--left ${left ? "book-flip__half--active" : "book-flip__half--inactive"} ${left && canGoBack() ? "book-flip__half--clickable" : ""}" data-side="left" role="button" tabindex="${left && canGoBack() ? "0" : "-1"}"${leftA11y}>
+      <div class="book-flip__half book-flip__half--left ${left ? "book-flip__half--active" : "book-flip__half--inactive"} ${leftNav ? "book-flip__half--clickable" : ""}${leftPassiveCls}" data-side="left"${leftRole} tabindex="${leftNav ? "0" : "-1"}"${leftA11y}>
         ${leftHtml}
       </div>
       <div class="book-flip__gutter" aria-hidden="true"></div>
-      <div class="book-flip__half book-flip__half--right ${right ? "book-flip__half--active" : "book-flip__half--inactive"} ${right && canGoForward() ? "book-flip__half--clickable" : ""}" data-side="right" role="button" tabindex="${right && canGoForward() ? "0" : "-1"}"${rightA11y}>
+      <div class="book-flip__half book-flip__half--right ${right ? "book-flip__half--active" : "book-flip__half--inactive"} ${rightNav ? "book-flip__half--clickable" : ""}${rightPassiveCls}" data-side="right"${rightRole} tabindex="${rightNav ? "0" : "-1"}"${rightA11y}>
         ${rightHtml}
       </div>
     `;
@@ -212,8 +218,8 @@ export function mountBookFlip(
     live.textContent = parts.join(". ") + ".";
   }
 
-  function renderSpread(): void {
-    spread.innerHTML = innerSpreadHtml() ?? "";
+  /** Toolbar, live region, and neighbors after spread DOM changes */
+  function refreshSpreadChrome(): void {
     prevBtn.disabled = !canGoBack();
     nextBtn.disabled = !canGoForward();
     announce();
@@ -221,27 +227,99 @@ export function mountBookFlip(
     if (spreadIndex > 0) void preloadSpreadIndex(spreadIndex - 1);
   }
 
+  /** Passive rear previews use frozen a11y/click state; restore after DOM promotion */
+  function applyPromotedPassiveSpreadSemantics(idx: number): void {
+    const maxIdx = maxSpreadIndex();
+    const left = spread.querySelector(
+      '.book-flip__half[data-side="left"]',
+    ) as HTMLElement | null;
+    const right = spread.querySelector(
+      '.book-flip__half[data-side="right"]',
+    ) as HTMLElement | null;
+    const leftPg = getLeftPage(idx);
+    const rightPg = getRightPage(idx);
+    const leftNav = !!(leftPg && idx > 0);
+    const rightNav = !!(rightPg && idx < maxIdx);
+
+    function patchHalf(
+      el: HTMLElement | null,
+      navigable: boolean,
+      ariaLabel: string,
+    ): void {
+      if (!el) return;
+      el.classList.remove("book-flip__half--rear-passive");
+      el.setAttribute("role", "button");
+      if (navigable) {
+        el.classList.add("book-flip__half--clickable");
+        el.setAttribute("tabindex", "0");
+        el.setAttribute("aria-label", ariaLabel);
+      } else {
+        el.classList.remove("book-flip__half--clickable");
+        el.setAttribute("tabindex", "-1");
+        el.removeAttribute("aria-label");
+      }
+    }
+
+    patchHalf(left, leftNav, "Turn page back");
+    patchHalf(right, rightNav, "Turn page forward");
+  }
+
+  /** Move decoded preview nodes into spread (avoids <img> rebuild flash from innerHTML) */
+  function promoteRearIntoSpread(rear: HTMLElement): void {
+    spread.replaceChildren(...Array.from(rear.childNodes));
+    rear.remove();
+  }
+
+  function renderSpread(): void {
+    spread.innerHTML = innerSpreadHtml(spreadIndex) ?? "";
+    refreshSpreadChrome();
+  }
+
+  function removeRearIfAny(): void {
+    stage.querySelectorAll(".book-flip__rear").forEach((n) => {
+      n.remove();
+    });
+  }
+
+  function syncRearToSpreadBBox(el: HTMLElement): void {
+    const sr = spread.getBoundingClientRect();
+    const sb = stage.getBoundingClientRect();
+    el.style.position = "absolute";
+    el.style.left = `${sr.left - sb.left}px`;
+    el.style.top = `${sr.top - sb.top}px`;
+    el.style.width = `${sr.width}px`;
+    el.style.height = `${sr.height}px`;
+    el.style.boxSizing = "border-box";
+  }
+
   function clearTimers(): void {
-    if (midTimer) clearTimeout(midTimer);
     if (endTimer) clearTimeout(endTimer);
-    midTimer = undefined;
     endTimer = undefined;
   }
 
-  function restoreSpreadChromeAfterFlip(): void {
+  function teardownAnimatedForwardFlip(rear: HTMLElement): void {
     animating = false;
     stage.querySelector(".book-flip__leaf")?.remove();
-    spread.querySelectorAll(".book-flip__half[data-side]").forEach((node) => {
-      (node as HTMLElement).style.removeProperty("visibility");
-    });
-    prevBtn.disabled = !canGoBack();
-    nextBtn.disabled = !canGoForward();
-    announce();
+    /* Promote decoded rear DOM instead of innerHTML rebuild so imgs don’t repaint */
+    spreadIndex += 1;
+    promoteRearIntoSpread(rear);
+    removeRearIfAny();
+    spread.style.removeProperty("position");
+    spread.style.removeProperty("z-index");
+    applyPromotedPassiveSpreadSemantics(spreadIndex);
+    refreshSpreadChrome();
   }
 
-  /** Mid-flip already replaced innerHTML; avoid a full re-render here (fixes end-of-turn image flash). */
-  function finishAnim(): void {
-    restoreSpreadChromeAfterFlip();
+  function teardownAnimatedBackwardFlip(rear: HTMLElement): void {
+    animating = false;
+    stage.querySelector(".book-flip__leaf")?.remove();
+    spreadIndex -= 1;
+    promoteRearIntoSpread(rear);
+    removeRearIfAny();
+    spread.style.removeProperty("position");
+    spread.style.removeProperty("z-index");
+    applyPromotedPassiveSpreadSemantics(spreadIndex);
+    refreshSpreadChrome();
   }
 
   async function beginForwardFlip(): Promise<void> {
@@ -254,8 +332,10 @@ export function mountBookFlip(
     }
 
     animating = true;
+    let rearWrap: HTMLElement | undefined;
     try {
       await preloadSpreadIndex(spreadIndex + 1);
+
       const rh = spread.querySelector(
         ".book-flip__half--right",
       ) as HTMLElement | null;
@@ -266,6 +346,25 @@ export function mountBookFlip(
 
       clearTimers();
 
+      rearWrap = document.createElement("div");
+      rearWrap.className = "book-flip__rear book-flip__spread";
+      rearWrap.setAttribute("aria-hidden", "true");
+      rearWrap.innerHTML = innerSpreadHtml(spreadIndex + 1, true) ?? "";
+      stage.insertBefore(rearWrap, spread);
+
+      spread.style.position = "relative";
+      spread.style.zIndex = "2";
+
+      void spread.offsetHeight;
+      void rearWrap.offsetHeight;
+      syncRearToSpreadBBox(rearWrap);
+      requestAnimationFrame(() => {
+        syncRearToSpreadBBox(rearWrap!);
+      });
+
+      const peelSlotHtml = rh.innerHTML;
+      rh.classList.add("book-flip__half--peel-slot-forward");
+
       const rect = rh.getBoundingClientRect();
       const stageRect = stage.getBoundingClientRect();
 
@@ -275,9 +374,7 @@ export function mountBookFlip(
       leaf.style.left = `${rect.left - stageRect.left}px`;
       leaf.style.width = `${rect.width}px`;
       leaf.style.height = `${rect.height}px`;
-      leaf.innerHTML = `<div class="book-flip__leaf-inner">${rh.innerHTML}</div>`;
-
-      rh.style.visibility = "hidden";
+      leaf.innerHTML = `<div class="book-flip__leaf-inner">${peelSlotHtml}</div>`;
       stage.appendChild(leaf);
 
       requestAnimationFrame(() => {
@@ -286,20 +383,13 @@ export function mountBookFlip(
         });
       });
 
-      const halfTime = FLIP_MS * 0.48;
-      midTimer = window.setTimeout(() => {
-        spreadIndex += 1;
-        spread.innerHTML = innerSpreadHtml() ?? "";
-        const newRight = spread.querySelector(
-          ".book-flip__half--right",
-        ) as HTMLElement | null;
-        if (newRight) newRight.style.visibility = "hidden";
-      }, halfTime);
-
+      const rearRef = rearWrap;
       endTimer = window.setTimeout(() => {
-        finishAnim();
+        teardownAnimatedForwardFlip(rearRef);
       }, FLIP_MS);
     } catch {
+      rearWrap?.remove();
+      removeRearIfAny();
       animating = false;
     }
   }
@@ -314,8 +404,10 @@ export function mountBookFlip(
     }
 
     animating = true;
+    let rearWrap: HTMLElement | undefined;
     try {
       await preloadSpreadIndex(spreadIndex - 1);
+
       const lh = spread.querySelector(
         ".book-flip__half--left",
       ) as HTMLElement | null;
@@ -326,6 +418,25 @@ export function mountBookFlip(
 
       clearTimers();
 
+      rearWrap = document.createElement("div");
+      rearWrap.className = "book-flip__rear book-flip__spread";
+      rearWrap.setAttribute("aria-hidden", "true");
+      rearWrap.innerHTML = innerSpreadHtml(spreadIndex - 1, true) ?? "";
+      stage.insertBefore(rearWrap, spread);
+
+      spread.style.position = "relative";
+      spread.style.zIndex = "2";
+
+      void spread.offsetHeight;
+      void rearWrap.offsetHeight;
+      syncRearToSpreadBBox(rearWrap);
+      requestAnimationFrame(() => {
+        syncRearToSpreadBBox(rearWrap!);
+      });
+
+      const peelSlotHtml = lh.innerHTML;
+      lh.classList.add("book-flip__half--peel-slot-back");
+
       const rect = lh.getBoundingClientRect();
       const stageRect = stage.getBoundingClientRect();
 
@@ -335,9 +446,7 @@ export function mountBookFlip(
       leaf.style.left = `${rect.left - stageRect.left}px`;
       leaf.style.width = `${rect.width}px`;
       leaf.style.height = `${rect.height}px`;
-      leaf.innerHTML = `<div class="book-flip__leaf-inner">${lh.innerHTML}</div>`;
-
-      lh.style.visibility = "hidden";
+      leaf.innerHTML = `<div class="book-flip__leaf-inner">${peelSlotHtml}</div>`;
       stage.appendChild(leaf);
 
       requestAnimationFrame(() => {
@@ -346,20 +455,13 @@ export function mountBookFlip(
         });
       });
 
-      const halfTime = FLIP_MS * 0.48;
-      midTimer = window.setTimeout(() => {
-        spreadIndex -= 1;
-        spread.innerHTML = innerSpreadHtml() ?? "";
-        const newLeft = spread.querySelector(
-          ".book-flip__half--left",
-        ) as HTMLElement | null;
-        if (newLeft) newLeft.style.visibility = "hidden";
-      }, halfTime);
-
+      const rearRef = rearWrap;
       endTimer = window.setTimeout(() => {
-        finishAnim();
+        teardownAnimatedBackwardFlip(rearRef);
       }, FLIP_MS);
     } catch {
+      rearWrap?.remove();
+      removeRearIfAny();
       animating = false;
     }
   }
