@@ -31,6 +31,28 @@ const collectionSlugs = allFacetSlugs(works, "collections");
       Home
     </a>
     <a
+      href="/about"
+      class:list={[{ "is-active": pathname === "/about" }]}
+      aria-current={pathname === "/about" ? "page" : undefined}
+      data-astro-prefetch
+    >
+      About
+    </a>
+    <a
+      href="/book"
+      class:list={[{
+        "is-active": pathname === "/book" || pathname.startsWith("/book/"),
+      }]}
+      aria-current={
+        pathname === "/book" || pathname.startsWith("/book/")
+          ? "page"
+          : undefined
+      }
+      data-astro-prefetch
+    >
+      Book
+    </a>
+    <a
       href="/works"
       class:list={[{ "is-active": matchWorks(pathname) }]}
       aria-current={matchWorks(pathname) ? "page" : undefined}
