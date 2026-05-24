@@ -38,6 +38,14 @@ const collectionSlugs = allFacetSlugs(works, "collections");
     >
       Works
     </a>
+    <a
+      href="/contact"
+      class:list={[{ "is-active": pathname === "/contact" }]}
+      aria-current={pathname === "/contact" ? "page" : undefined}
+      data-astro-prefetch
+    >
+      Contact
+    </a>
 
     <div class="nav-rail__group" role="group" aria-labelledby="nav-collection-heading">
       <a

@@ -1,0 +1,261 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { siteName } from "../config/site";
+
+const description =
+  "Send a message — inquiries about works, exhibitions, or commissions.";
+
+const accessKey = (import.meta.env.PUBLIC_WEB3FORMS_ACCESS_KEY ?? "").trim();
+const formReady = accessKey.length > 0;
+const mailSubject = `${siteName} — contact form`;
+
+/** Relative path — client-side redirect after fetch avoids Web3Forms “same-domain” redirect rules (e.g. localhost vs production URL). */
+const thanksPath = "/contact/thanks";
+---
+
+<BaseLayout title="Contact" description={description} canonicalPath="/contact">
+  <h1 class="page-title">Contact</h1>
+  <p class="lede muted">
+    Use the form below to reach out. Submissions are delivered by email via{" "}
+    <a href="https://web3forms.com" rel="noopener noreferrer">Web3Forms</a> (free tier).
+  </p>
+
+  {
+    !formReady ? (
+      <div class="contact__setup prose">
+        <p>
+          <strong>Form not configured yet.</strong> Create a key at{" "}
+          <a href="https://web3forms.com">web3forms.com</a>, then add it to a{" "}
+          <code>.env</code> file in the project root:
+        </p>
+        <pre><code>PUBLIC_WEB3FORMS_ACCESS_KEY=your_key_here</code></pre>
+        <p>
+          Restart the dev server and rebuild for production. The key is safe to expose in static
+          HTML (see Web3Forms docs).
+        </p>
+      </div>
+    ) : (
+      <>
+        <p id="contact-form-status" class="contact__status muted" hidden></p>
+        <p id="contact-form-error" class="contact__error" role="alert" hidden></p>
+
+        <form id="contact-form" class="contact__form">
+          <input type="hidden" name="access_key" value={accessKey} />
+          <input type="hidden" name="subject" value={mailSubject} />
+
+          {/* Honeypot — Web3Forms discards bots that tick this */}
+          <input
+            type="checkbox"
+            name="botcheck"
+            class="contact__honeypot"
+            tabindex="-1"
+            autocomplete="off"
+            aria-hidden="true"
+          />
+
+          <label class="contact__field">
+            <span>Name</span>
+            <input type="text" name="name" required autocomplete="name" />
+          </label>
+
+          <label class="contact__field">
+            <span>Email</span>
+            <input type="email" name="email" required autocomplete="email" />
+          </label>
+
+          <label class="contact__field">
+            <span>Message</span>
+            <textarea name="message" rows="7" required></textarea>
+          </label>
+
+          <button type="submit" class="contact__submit">Send message</button>
+        </form>
+
+        <script
+          define:vars={{ accessKey, mailSubject, thanksPath }}
+          is:inline
+        >
+          (function () {
+            const form = document.getElementById("contact-form");
+            const statusEl = document.getElementById("contact-form-status");
+            const errEl = document.getElementById("contact-form-error");
+            const submitBtn = form?.querySelector('button[type="submit"]');
+            if (!form || !statusEl || !errEl || !submitBtn) return;
+
+            function showError(msg) {
+              errEl.textContent = msg;
+              errEl.hidden = false;
+              statusEl.hidden = true;
+            }
+
+            function clearError() {
+              errEl.textContent = "";
+              errEl.hidden = true;
+            }
+
+            form.addEventListener("submit", async function (e) {
+              e.preventDefault();
+              clearError();
+
+              const name = String(form.querySelector('[name="name"]')?.value ?? "").trim();
+              const email = String(form.querySelector('[name="email"]')?.value ?? "").trim();
+              const message = String(form.querySelector('[name="message"]')?.value ?? "").trim();
+              const botcheck = form.querySelector('[name="botcheck"]')?.checked;
+
+              const payload = {
+                access_key: accessKey,
+                subject: mailSubject,
+                name,
+                email,
+                message,
+              };
+              if (botcheck) payload.botcheck = true;
+
+              submitBtn.disabled = true;
+              statusEl.textContent = "Sending…";
+              statusEl.hidden = false;
+
+              try {
+                const res = await fetch("https://api.web3forms.com/submit", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                  },
+                  body: JSON.stringify(payload),
+                });
+                const data = await res.json().catch(function () {
+                  return {};
+                });
+
+                const ok =
+                  res.ok &&
+                  (data.success === true ||
+                    (typeof data.message === "string" &&
+                      data.message.toLowerCase().includes("success")));
+
+                if (!ok) {
+                  const msg =
+                    (typeof data.message === "string" && data.message) ||
+                    (data.body && typeof data.body.message === "string" && data.body.message) ||
+                    "Could not send your message. Please try again.";
+                  showError(msg);
+                  submitBtn.disabled = false;
+                  statusEl.hidden = true;
+                  return;
+                }
+
+                window.location.assign(thanksPath);
+              } catch {
+                showError("Network error. Check your connection and try again.");
+                submitBtn.disabled = false;
+                statusEl.hidden = true;
+              }
+            });
+          })();
+        </script>
+      </>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .contact__setup {
+    margin-top: var(--space-lg);
+  }
+
+  .contact__status {
+    max-width: 32rem;
+    margin: 0 0 var(--space-md);
+  }
+
+  .contact__error {
+    max-width: 32rem;
+    margin: 0 0 var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in oklab, #c42b1c 50%, var(--color-border));
+    background: color-mix(in oklab, #c42b1c 12%, transparent);
+    color: var(--color-text);
+    font-size: 0.98rem;
+  }
+
+  .contact__setup pre {
+    margin: var(--space-md) 0;
+    padding: var(--space-md);
+    overflow: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: color-mix(in oklab, var(--color-bg) 90%, var(--color-border));
+    font-size: 0.9rem;
+  }
+
+  .contact__form {
+    max-width: 32rem;
+    margin-top: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .contact__honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .contact__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text);
+  }
+
+  .contact__field span {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  .contact__field input,
+  .contact__field textarea {
+    font: inherit;
+    color: var(--color-text);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    width: 100%;
+    resize: vertical;
+    min-height: 44px;
+  }
+
+  .contact__field textarea {
+    min-height: 8rem;
+  }
+
+  .contact__submit {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-start;
+    padding: var(--space-sm) var(--space-xl);
+    border-radius: var(--radius);
+    border: 1px solid var(--color-accent);
+    background: color-mix(in oklab, var(--color-accent) 22%, var(--color-bg));
+    color: var(--color-text);
+  }
+
+  .contact__submit:hover {
+    background: color-mix(in oklab, var(--color-accent) 32%, var(--color-bg));
+  }
+
+  .contact__submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+</style>
