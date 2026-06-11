@@ -1,16 +1,14 @@
 ---
-import { Image } from "astro:assets";
+import { Image, getImage } from "astro:assets";
 import type { ImageMetadata } from "astro";
+import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import defaultHero from "../../assets/placeholders/hero-landscape.svg";
+import { workHasFacet } from "../../utils/facets";
 
 const description =
   "New book — browse the cover and interior spreads with an interactive page-flip preview.";
 
-const pagesGlob = import.meta.glob<{ default: ImageMetadata }>(
-  "/src/assets/book/pages/**/*.{jpg,jpeg,png,gif,webp,svg}",
-  { eager: true },
-);
 const heroGlob = import.meta.glob<{ default: ImageMetadata }>(
   "/src/assets/book/hero.{jpg,jpeg,png,gif,webp,svg}",
   { eager: true },
@@ -22,39 +20,65 @@ function sortedGlobKeys(record: Record<string, unknown>): string[] {
   );
 }
 
-function entriesToBookPages(
-  record: Record<string, { default: ImageMetadata }>,
-  altPrefix: string,
-) {
-  return sortedGlobKeys(record).map((key, i) => {
-    const im = record[key].default;
+type BookPageSource = {
+  src: ImageMetadata;
+  alt: string;
+  pageNumber: string;
+  sortValue: number;
+};
+
+function pageSortValue(page: string | number): number | null {
+  const raw = String(page).trim();
+  if (!raw) return null;
+  if (raw.toLowerCase() === "cover") return 0;
+
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+const bookWorks = (await getCollection("works", ({ data }) => !data.draft))
+  .filter(
+    (entry) =>
+      workHasFacet(entry, "collections", "collage_book") &&
+      entry.data.page != null &&
+      String(entry.data.page).trim() !== "",
+  )
+  .map((entry): BookPageSource | null => {
+    const sortValue = pageSortValue(entry.data.page!);
+    const image = entry.data.images[0];
+    if (sortValue == null || !image) return null;
+    const pageNumber = String(entry.data.page).trim();
     return {
-      src: im.src,
-      alt: `${altPrefix} — page ${i + 1}`,
-      pageNumber: i + 1,
+      src: image.src,
+      alt: image.alt || entry.data.title,
+      pageNumber,
+      sortValue,
     };
-  });
-}
+  })
+  .filter((page): page is BookPageSource => page != null)
+  .sort((a, b) => a.sortValue - b.sortValue);
 
-let bookPages = entriesToBookPages(pagesGlob, "Book");
-
-if (bookPages.length === 0) {
-  const ph = import.meta.glob<{ default: ImageMetadata }>(
-    "/src/assets/placeholders/**/*.svg",
-    { eager: true },
-  );
-  bookPages = entriesToBookPages(ph, "Preview").slice(0, 9);
-}
+const bookPages = await Promise.all(
+  bookWorks.map(async ({ src, alt, pageNumber }) => {
+    const optimized = await getImage({ src, width: 912 });
+    return {
+      src: optimized.src,
+      alt,
+      pageNumber,
+    };
+  }),
+);
 
 const bookPagesJson = JSON.stringify(bookPages);
 
 const heroKeys = sortedGlobKeys(heroGlob);
 const heroImage =
-  heroKeys.length > 0 ? heroGlob[heroKeys[0]].default : defaultHero;
+  bookWorks[0]?.src ??
+  (heroKeys.length > 0 ? heroGlob[heroKeys[0]].default : defaultHero);
 ---
 
-<BaseLayout title="Book" description={description} canonicalPath="/book">
-  <h1 class="page-title">Book</h1>
+<BaseLayout title="Fragments" description={description} canonicalPath="/book">
+  <h1 class="page-title">Fragments</h1>
 
   <p class="book-page__intro lede muted">
     Replace hero and page scans in{" "}
@@ -112,7 +136,7 @@ const heroImage =
       type BookPagePayload = {
         src: string;
         alt: string;
-        pageNumber: number;
+        pageNumber: string;
       };
       const pages = JSON.parse(
         payload.textContent || "[]",
@@ -126,21 +150,20 @@ const heroImage =
 
 <style is:global>
   /*
-   * A5 portrait: page 148 × 210 mm. Interior frames: 114 × 151 mm, top inset 24 mm,
+   * A5 portrait: page 148 × 210 mm. Interior frames are centred at the original
+   * 114 × 151 mm position, scaled up 10% to reduce the white margins.
    * inner edge(s) ↔ spread centre gap 22 mm (→ 12 mm outer margins on spine/fore-edge).
    * Cover on first spread: full-page image on the right only.
    */
   .book-flip-root {
-    --bf-radius: var(--radius);
     --bf-gutter-w: 2px;
     --bf-mm-page-w: 148;
     --bf-mm-page-h: 210;
-    --bf-mm-frame-w: 114;
-    --bf-mm-frame-h: 151;
-    --bf-mm-frame-top: 24;
-    --bf-mm-from-centre: 22;
-    --bf-mm-outer-margin: 12;
-    --bf-shadow: 0 12px 40px color-mix(in oklab, var(--color-text) 12%, transparent);
+    --bf-mm-frame-w: 125.4;
+    --bf-mm-frame-h: 166.1;
+    --bf-mm-frame-top: 16.45;
+    --bf-mm-from-centre: 16.3;
+    --bf-mm-outer-margin: 6.3;
   }
 
   .book-flip__live {
@@ -156,7 +179,6 @@ const heroImage =
     margin: 0;
     padding: var(--space-lg);
     border: 1px dashed var(--color-border);
-    border-radius: var(--bf-radius);
     color: var(--color-muted);
   }
 
@@ -169,18 +191,17 @@ const heroImage =
 
   .book-flip__btn {
     font: inherit;
-    font-weight: 600;
+    font-weight: 400;
     padding: var(--space-sm) var(--space-md);
-    border-radius: var(--bf-radius);
     border: 1px solid var(--color-border);
-    background: color-mix(in oklab, var(--color-accent) 10%, var(--color-bg));
+    background: var(--color-bg);
     color: var(--color-text);
     cursor: pointer;
     min-height: 44px;
   }
 
   .book-flip__btn:hover:not(:disabled) {
-    border-color: var(--color-accent);
+    background: var(--color-code-bg);
   }
 
   .book-flip__btn:disabled {
@@ -192,14 +213,11 @@ const heroImage =
     position: relative;
     max-width: calc(840px + var(--bf-gutter-w));
     margin: 0 auto;
-    border-radius: var(--bf-radius);
-    box-shadow: var(--bf-shadow);
-    outline: 1px solid color-mix(in oklab, var(--color-border) 80%, transparent);
-    outline-offset: -1px;
+    border: 1px solid var(--color-border);
     perspective: 1850px;
     transform-style: preserve-3d;
     overflow: visible;
-    background: color-mix(in oklab, var(--color-border) 20%, var(--color-bg));
+    background: var(--color-code-bg);
     padding: clamp(10px, 2vw, 18px);
   }
 
@@ -256,31 +274,26 @@ const heroImage =
 
   @media (prefers-color-scheme: dark) {
     .book-flip__half {
-      background: #f7f7f8;
+      background: #fff;
       color-scheme: light;
     }
   }
 
   .book-flip__half--inactive {
     pointer-events: none;
-    background: linear-gradient(
-      135deg,
-      color-mix(in oklab, #ffffff 94%, var(--color-border)),
-      color-mix(in oklab, #fafafa 100%, transparent)
-    );
+    background: #fafafa;
   }
 
   .book-flip__half--clickable {
     cursor: pointer;
-    transition: outline-color 120ms ease, box-shadow 120ms ease;
   }
 
   .book-flip__half--clickable:hover {
-    box-shadow: inset 0 0 0 999px color-mix(in oklab, var(--color-accent) 6%, transparent);
+    background: #f4f4f4;
   }
 
   .book-flip__half:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-text);
     outline-offset: -6px;
     z-index: 1;
   }
@@ -289,12 +302,7 @@ const heroImage =
     align-self: stretch;
     width: var(--bf-gutter-w);
     flex-shrink: 0;
-    background: linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--color-border) 35%, transparent),
-      color-mix(in oklab, var(--color-text) 14%, transparent),
-      color-mix(in oklab, var(--color-border) 35%, transparent)
-    );
+    background: var(--color-border);
   }
 
   .book-flip__sheet {
@@ -320,16 +328,12 @@ const heroImage =
     background: #fff;
     box-sizing: border-box;
     flex-shrink: 0;
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-border) 35%, transparent);
+    border: 1px solid var(--color-border);
   }
 
   .book-flip__page-face--blank {
-    background: linear-gradient(
-      140deg,
-      color-mix(in oklab, #fafafa 100%, transparent),
-      color-mix(in oklab, #eaeaea 92%, transparent)
-    );
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-border) 25%, transparent);
+    background: #f4f4f4;
+    border: 1px solid var(--color-border);
   }
 
   .book-flip__frame {
@@ -337,14 +341,13 @@ const heroImage =
     background: #fff;
   }
 
-  /* Interior frames: identical size on left & right pages (114×151 mm in page coordinates) */
+  /* Interior frames: identical size on left & right pages, centred from the original layout. */
   .book-flip__frame--interior-left {
     position: absolute;
     left: calc(100% * var(--bf-mm-outer-margin) / var(--bf-mm-page-w));
     top: calc(100% * var(--bf-mm-frame-top) / var(--bf-mm-page-h));
     width: calc(100% * var(--bf-mm-frame-w) / var(--bf-mm-page-w));
     height: calc(100% * var(--bf-mm-frame-h) / var(--bf-mm-page-h));
-    border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
   }
 
   .book-flip__frame--interior-right {
@@ -353,13 +356,13 @@ const heroImage =
     top: calc(100% * var(--bf-mm-frame-top) / var(--bf-mm-page-h));
     width: calc(100% * var(--bf-mm-frame-w) / var(--bf-mm-page-w));
     height: calc(100% * var(--bf-mm-frame-h) / var(--bf-mm-page-h));
-    border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
   }
 
   .book-flip__frame--cover {
     position: absolute;
     inset: 0;
     border: none;
+    background: transparent;
   }
 
   .book-flip__img-wrap {
@@ -379,6 +382,8 @@ const heroImage =
   }
 
   .book-flip__frame--cover .book-flip__img-wrap {
+    position: absolute;
+    inset: 0;
     background: #fff;
   }
 
@@ -399,6 +404,9 @@ const heroImage =
   .book-flip__frame--cover .book-flip__img-wrap img {
     width: 100%;
     height: 100%;
+    max-width: none;
+    max-height: none;
+    display: block;
     object-fit: cover;
   }
 
@@ -419,13 +427,7 @@ const heroImage =
   }
 
   .book-flip__num--cover {
-    bottom: calc(100% * 8 / var(--bf-mm-page-h));
-    color: color-mix(in oklab, #222 94%, transparent);
-    text-shadow:
-      0 0 12px rgb(255 255 255 / 0.75),
-      0 1px 2px rgb(255 255 255 / 0.95);
-    font-weight: 600;
-    font-size: 0.8rem;
+    display: none;
   }
 
   /* Flip leaf overlay */
@@ -498,12 +500,6 @@ const heroImage =
   }
 
   .book-page__hero-frame {
-    border-radius: var(--radius);
-    overflow: hidden;
-    border: 1px solid var(--color-border);
-    box-shadow:
-      0 16px 40px color-mix(in oklab, var(--color-text) 10%, transparent),
-      0 0 0 1px color-mix(in oklab, var(--color-border) 40%, transparent);
     max-height: min(520px, 55vh);
   }
 
@@ -514,7 +510,6 @@ const heroImage =
     object-fit: cover;
     object-position: center;
     display: block;
-    vertical-align: middle;
   }
 
   .book-page__body {
@@ -522,14 +517,13 @@ const heroImage =
   }
 
   .book-page__gallery {
-    margin-top: var(--space-xl);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--color-border);
+    margin-top: var(--space-section);
   }
 
   .book-page__gallery-title {
     margin: 0 0 var(--space-sm);
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+    font-weight: 700;
   }
 
   .book-page__gallery-hint {

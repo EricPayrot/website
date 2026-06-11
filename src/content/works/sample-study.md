@@ -8,8 +8,6 @@ keywords:
   - oil
   - study
   - sample
-draft: false
-featured: true
 date: 2024-06-01
 facets:
   collections:

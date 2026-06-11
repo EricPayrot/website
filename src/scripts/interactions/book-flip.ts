@@ -5,7 +5,7 @@
 export type BookPage = {
   src: string;
   alt: string;
-  pageNumber: number;
+  pageNumber: string;
 };
 
 const FLIP_MS = 650;
@@ -208,13 +208,19 @@ export function mountBookFlip(
       .replace(/>/g, "&gt;");
   }
 
+  function pageLabel(p: BookPage): string {
+    return p.pageNumber.toLowerCase() === "cover"
+      ? "cover"
+      : `page ${p.pageNumber}`;
+  }
+
   function announce(): void {
     const left = getLeftPage(spreadIndex);
     const right = getRightPage(spreadIndex);
     const parts: string[] = [];
-    if (left) parts.push(`Left page ${left.pageNumber}`);
+    if (left) parts.push(`Left ${pageLabel(left)}`);
     else parts.push("Cover spread");
-    if (right) parts.push(`Right page ${right.pageNumber}`);
+    if (right) parts.push(`Right ${pageLabel(right)}`);
     live.textContent = parts.join(". ") + ".";
   }
 

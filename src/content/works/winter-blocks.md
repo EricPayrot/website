@@ -4,8 +4,6 @@ description: "Placeholder piece using square fields of flat color."
 year: 2023
 medium: "Gouache on paper"
 dimensions: "50 × 50 cm"
-draft: false
-featured: false
 date: 2023-11-02
 facets:
   collections:

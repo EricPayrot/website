@@ -4,8 +4,6 @@ description: "Placeholder piece using vertical rectangles for portrait-oriented 
 year: 2024
 medium: "Acrylic on canvas"
 dimensions: "180 × 120 cm"
-draft: false
-featured: false
 date: 2024-05-12
 facets:
   collections:

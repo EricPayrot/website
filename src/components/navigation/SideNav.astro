@@ -1,112 +1,50 @@
 ---
-import { getCollection } from "astro:content";
 import { siteName } from "../../config/site";
-import { labelForCollectionSlug } from "../../config/facet-labels";
-import { allFacetSlugs } from "../../utils/facets";
-import { sortPublishedWorks } from "../../utils/gallery-tiles";
 
 const pathname = Astro.url.pathname.replace(/\/$/, "") || "/";
-
-const matchWorks = (p: string) =>
-  p.startsWith("/works") || p.startsWith("/artwork");
-const matchCollectionIndex = (p: string) => p === "/collections";
-const matchCollectionChild = (p: string, slug: string) =>
-  p === `/collections/${slug}`;
-
-const works = sortPublishedWorks(await getCollection("works"));
-const collectionSlugs = allFacetSlugs(works, "collections");
 ---
 
 <aside class="nav-rail" aria-label="Site">
-  <div class="nav-rail__brand">
-    <a href="/">{siteName}</a>
-  </div>
-  <nav class="nav-rail__links" aria-label="Primary">
-    <a
-      href="/"
-      class:list={[{ "is-active": pathname === "/" }]}
-      aria-current={pathname === "/" ? "page" : undefined}
-      data-astro-prefetch
-    >
-      Home
-    </a>
-    <a
-      href="/about"
-      class:list={[{ "is-active": pathname === "/about" }]}
-      aria-current={pathname === "/about" ? "page" : undefined}
-      data-astro-prefetch
-    >
-      About
-    </a>
-    <a
-      href="/book"
-      class:list={[{
-        "is-active": pathname === "/book" || pathname.startsWith("/book/"),
-      }]}
-      aria-current={
-        pathname === "/book" || pathname.startsWith("/book/")
-          ? "page"
-          : undefined
-      }
-      data-astro-prefetch
-    >
-      Book
-    </a>
-    <a
-      href="/works"
-      class:list={[{ "is-active": matchWorks(pathname) }]}
-      aria-current={matchWorks(pathname) ? "page" : undefined}
-      data-astro-prefetch
-    >
-      Works
-    </a>
-    <a
-      href="/contact"
-      class:list={[{ "is-active": pathname === "/contact" }]}
-      aria-current={pathname === "/contact" ? "page" : undefined}
-      data-astro-prefetch
-    >
-      Contact
-    </a>
-
-    <div class="nav-rail__group" role="group" aria-labelledby="nav-collection-heading">
-      <a
-        id="nav-collection-heading"
-        href="/collections"
-        class:list={[
-          "nav-rail__group-heading",
-          { "is-active": matchCollectionIndex(pathname) },
-        ]}
-        aria-current={
-          matchCollectionIndex(pathname) ? "page" : undefined
-        }
-        data-astro-prefetch
-      >
-        Collection
-      </a>
-      {
-        collectionSlugs.length > 0 && (
-          <ul class="nav-rail__sub">
-            {collectionSlugs.map((slug) => {
-              const href = `/collections/${slug}`;
-              const active = matchCollectionChild(pathname, slug);
-              return (
-                <li>
-                  <a
-                    href={href}
-                    class:list={[{ "is-active": active }]}
-                    aria-current={active ? "page" : undefined}
-                    data-astro-prefetch
-                  >
-                    {labelForCollectionSlug(slug)}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        )
-      }
-    </div>
+  <a class="nav-rail__brand" href="/book">{siteName}</a>
+  <nav class="nav-rail__nav" aria-label="Primary">
+    <ul class="nav-rail__links">
+      <li>
+        <a
+          href="/book"
+          class:list={[{
+            "is-active": pathname === "/book" || pathname.startsWith("/book/"),
+          }]}
+          aria-current={
+            pathname === "/book" || pathname.startsWith("/book/")
+              ? "page"
+              : undefined
+          }
+          data-astro-prefetch
+        >
+          Fragments
+        </a>
+      </li>
+      <li>
+        <a
+          href="/about"
+          class:list={[{ "is-active": pathname === "/about" }]}
+          aria-current={pathname === "/about" ? "page" : undefined}
+          data-astro-prefetch
+        >
+          About
+        </a>
+      </li>
+      <li>
+        <a
+          href="/contact"
+          class:list={[{ "is-active": pathname === "/contact" }]}
+          aria-current={pathname === "/contact" ? "page" : undefined}
+          data-astro-prefetch
+        >
+          Contact
+        </a>
+      </li>
+    </ul>
   </nav>
 </aside>
 
@@ -114,160 +52,69 @@ const collectionSlugs = allFacetSlugs(works, "collections");
   .nav-rail {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
-    padding: var(--space-md) var(--space-lg);
+    gap: var(--space-xl);
+    padding: var(--space-xl) var(--space-lg);
     border-right: 1px solid var(--color-border);
-    background: color-mix(in oklab, var(--color-bg) 92%, var(--color-border));
+    background: var(--color-bg);
     min-height: 100%;
   }
 
-  .nav-rail__brand a {
+  .nav-rail__brand {
+    font-family: var(--font-sans);
+    font-size: 1.375rem;
     font-weight: 700;
-    font-size: 1.05rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
     text-decoration: none;
     color: var(--color-text);
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
+    display: block;
+  }
+
+  .nav-rail__brand:visited {
+    color: var(--color-text);
   }
 
   .nav-rail__links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
   }
 
-  .nav-rail__links > a {
+  .nav-rail__links a {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.65;
+    color: var(--color-text-secondary);
     text-decoration: none;
-    font-weight: 600;
-    color: var(--color-muted);
-    padding: var(--space-sm) var(--space-sm);
-    border-radius: var(--radius);
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
+    display: block;
+    padding: var(--space-sm) 0;
   }
 
-  .nav-rail__links > a:hover {
+  .nav-rail__links a:visited {
+    color: var(--color-text-secondary);
+  }
+
+  .nav-rail__links a:hover {
     color: var(--color-text);
-    background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
-  .nav-rail__links > a.is-active {
+  .nav-rail__links a.is-active {
     color: var(--color-text);
-    background: color-mix(in oklab, var(--color-accent) 18%, transparent);
-  }
-
-  .nav-rail__group {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-top: var(--space-sm);
-    margin-top: var(--space-xs);
-    border-top: 1px solid var(--color-border);
-  }
-
-  .nav-rail__group-heading {
-    text-decoration: none;
-    font-weight: 600;
-    color: var(--color-muted);
-    padding: var(--space-sm) var(--space-sm);
-    border-radius: var(--radius);
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .nav-rail__group-heading:hover {
-    color: var(--color-text);
-    background: color-mix(in oklab, var(--color-accent) 12%, transparent);
-  }
-
-  .nav-rail__group-heading.is-active {
-    color: var(--color-text);
-    background: color-mix(in oklab, var(--color-accent) 18%, transparent);
-  }
-
-  .nav-rail__sub {
-    list-style: none;
-    margin: 0;
-    padding: 0 0 var(--space-xs) var(--space-md);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .nav-rail__sub a {
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 0.95rem;
-    color: var(--color-muted);
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius);
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .nav-rail__sub a:hover {
-    color: var(--color-text);
-    background: color-mix(in oklab, var(--color-accent) 12%, transparent);
-  }
-
-  .nav-rail__sub a.is-active {
-    color: var(--color-text);
-    background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+    font-weight: 700;
   }
 
   @media (max-width: 767px) {
     .nav-rail {
-      flex-direction: row;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      gap: var(--space-md);
-      min-height: unset;
+      padding: var(--space-lg) var(--space-md);
       border-right: none;
       border-bottom: 1px solid var(--color-border);
-    }
-
-    .nav-rail__brand {
-      flex: 1 1 auto;
-    }
-
-    .nav-rail__links {
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: var(--space-sm);
-      align-items: center;
-      width: 100%;
-    }
-
-    .nav-rail__group {
-      flex: 1 1 100%;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: center;
-      border-top: none;
-      padding-top: 0;
-      margin-top: 0;
-      border-left: none;
-      gap: var(--space-sm);
-    }
-
-    .nav-rail__group-heading {
-      flex: 0 0 auto;
-    }
-
-    .nav-rail__sub {
-      flex: 1 1 auto;
-      flex-direction: row;
-      flex-wrap: wrap;
-      padding: 0;
-      gap: var(--space-xs);
-    }
-
-    .nav-rail__sub li {
-      flex: 0 0 auto;
+      min-height: unset;
     }
   }
 </style>

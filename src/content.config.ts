@@ -22,6 +22,7 @@ const works = defineCollection({
       title: z.string(),
       description: z.string(),
       facets: facetsSchema.optional(),
+      page: z.union([z.number(), z.string()]).optional(),
       year: z.union([z.number(), z.string()]).optional(),
       medium: z.string().optional(),
       dimensions: z.string().optional(),

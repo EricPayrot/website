@@ -43,6 +43,7 @@ One **row per artwork**, **one linked image**:
 | **`alt`** | Image `alt` text; fallback is derived from the filename if blank. |
 | **`title`** | Work title. |
 | **`description`** | Short description → frontmatter (`(No description)` if blank). |
+| **`page`** | Page reference → frontmatter when filled. |
 | **`year`**, **`medium`**, **`dimensions`** | Passed through when filled. |
 
 Comma‑separated taxonomy (each token is normalised to a kebab slug in YAML facets):
@@ -57,7 +58,6 @@ If you rename them or add mappings in **`config.yaml` → `columns`**, you can o
 
 - **`body`** — Markdown after frontmatter  
 - **`keywords`**  
-- **`draft`**, **`featured`** — booleans (`true`/`false`, `yes`/`no`, …)  
 - **`date`** — passed as text (parsed by Astro/Zod coercion)  
 - **`og_image`** — separate OG/Twitter raster if you track it outside `path`.
 

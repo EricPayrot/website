@@ -1,5 +1,5 @@
 /** Global site configuration — update `siteOrigin` and artist details for production. */
-export const siteName = "Studio Portfolio";
+export const siteName = "Eric Payrot";
 
 /** Canonical origin (no trailing slash). Must match `site` in `astro.config.ts`. */
 export const siteOrigin = "https://example.com";

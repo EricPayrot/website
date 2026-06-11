@@ -41,6 +41,7 @@ DEFAULT_COLUMN_HEADERS: dict[str, str] = {
     "alt": "alt",
     "title": "title",
     "description": "description",
+    "page": "page",
     "year": "year",
     "medium": "medium",
     "dimensions": "dimensions",
@@ -53,8 +54,6 @@ DEFAULT_COLUMN_HEADERS: dict[str, str] = {
     # optional overrides (leave blank string in merged config to omit)
     "body": "",
     "keywords": "",
-    "draft": "",
-    "featured": "",
     "date": "",
     "og_image": "",
 }
@@ -67,17 +66,6 @@ FACET_KEYS = (
     "motion",
     "influences",
 )
-
-
-def parse_bool(cell: Any) -> bool:
-    if cell is None or str(cell).strip() == "":
-        return False
-    s = str(cell).strip().lower()
-    if s in {"1", "true", "yes", "y", "on"}:
-        return True
-    if s in {"0", "false", "no", "n", "off"}:
-        return False
-    raise ValueError(f"Unrecognised boolean: {cell!r}")
 
 
 def split_list_cell(cell: Any) -> list[str] | None:
@@ -314,12 +302,11 @@ def fm_dump(data: dict[str, Any]) -> str:
     order = [
         "title",
         "description",
+        "page",
         "year",
         "medium",
         "dimensions",
         "keywords",
-        "draft",
-        "featured",
         "date",
         "facets",
         "catalog_source",
@@ -468,27 +455,13 @@ def process_rows(
         year = coerce_year(
             lookup(padded, name_to_ix, hdr_cfg["year"]) if hdr_cfg["year"].strip() else None
         )
+        page = lookup(padded, name_to_ix, hdr_cfg["page"]) if hdr_cfg["page"].strip() else None
         medium = lookup(padded, name_to_ix, hdr_cfg["medium"]) if hdr_cfg["medium"].strip() else None
         dimensions_txt = (
             lookup(padded, name_to_ix, hdr_cfg["dimensions"]) if hdr_cfg["dimensions"].strip() else None
         )
         date_str = lookup(padded, name_to_ix, hdr_cfg["date"]) if hdr_cfg["date"].strip() else None
         og_cell = lookup(padded, name_to_ix, hdr_cfg["og_image"]) if hdr_cfg["og_image"].strip() else ""
-
-        draft_txt = lookup(padded, name_to_ix, hdr_cfg["draft"]) if hdr_cfg["draft"].strip() else ""
-        featured_txt = (
-            lookup(padded, name_to_ix, hdr_cfg["featured"]) if hdr_cfg["featured"].strip() else ""
-        )
-
-        try:
-            draft = parse_bool(draft_txt) if draft_txt else False
-        except ValueError:
-            draft = False
-
-        try:
-            featured = parse_bool(featured_txt) if featured_txt else False
-        except ValueError:
-            featured = False
 
         fm_title = title.strip() if title else slug
         fm_description = (
@@ -514,12 +487,12 @@ def process_rows(
             "title": fm_title,
             "description": fm_description,
             "catalog_source": "spreadsheet-import",
-            "draft": draft,
-            "featured": featured,
             "images": imgs,
         }
         if year is not None:
             fm["year"] = year
+        if page:
+            fm["page"] = page.strip()
         if medium:
             fm["medium"] = medium.strip()
         if dimensions_txt:

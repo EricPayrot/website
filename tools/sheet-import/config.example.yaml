@@ -24,6 +24,7 @@ columns:
   alt: alt
   title: title
   description: description
+  page: page
   year: year
   medium: medium
   dimensions: dimensions
@@ -38,8 +39,6 @@ columns:
   # --- optional extensions (omit key or leave value empty to disable) ---
   body: ""
   keywords: ""
-  draft: ""
-  featured: ""
   date: ""
   og_image: ""
 

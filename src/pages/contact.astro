@@ -9,8 +9,6 @@ const accessKey = (import.meta.env.PUBLIC_WEB3FORMS_ACCESS_KEY ?? "").trim();
 const formReady = accessKey.length > 0;
 const mailSubject = `${siteName} — contact form`;
 
-/** Relative path — client-side redirect after fetch avoids Web3Forms “same-domain” redirect rules (e.g. localhost vs production URL). */
-const thanksPath = "/contact/thanks";
 ---
 
 <BaseLayout title="Contact" description={description} canonicalPath="/contact">
@@ -38,6 +36,10 @@ const thanksPath = "/contact/thanks";
       <>
         <p id="contact-form-status" class="contact__status muted" hidden></p>
         <p id="contact-form-error" class="contact__error" role="alert" hidden></p>
+        <div id="contact-form-success" class="contact__success" hidden>
+          <h2 class="contact__success-title">Thank you</h2>
+          <p>Your message has been sent. I will reply when I can.</p>
+        </div>
 
         <form id="contact-form" class="contact__form">
           <input type="hidden" name="access_key" value={accessKey} />
@@ -72,15 +74,16 @@ const thanksPath = "/contact/thanks";
         </form>
 
         <script
-          define:vars={{ accessKey, mailSubject, thanksPath }}
+          define:vars={{ accessKey, mailSubject }}
           is:inline
         >
           (function () {
             const form = document.getElementById("contact-form");
             const statusEl = document.getElementById("contact-form-status");
             const errEl = document.getElementById("contact-form-error");
+            const successEl = document.getElementById("contact-form-success");
             const submitBtn = form?.querySelector('button[type="submit"]');
-            if (!form || !statusEl || !errEl || !submitBtn) return;
+            if (!form || !statusEl || !errEl || !successEl || !submitBtn) return;
 
             function showError(msg) {
               errEl.textContent = msg;
@@ -145,7 +148,9 @@ const thanksPath = "/contact/thanks";
                   return;
                 }
 
-                window.location.assign(thanksPath);
+                form.hidden = true;
+                successEl.hidden = false;
+                statusEl.hidden = true;
               } catch {
                 showError("Network error. Check your connection and try again.");
                 submitBtn.disabled = false;
@@ -173,21 +178,38 @@ const thanksPath = "/contact/thanks";
     max-width: 32rem;
     margin: 0 0 var(--space-md);
     padding: var(--space-md);
-    border-radius: var(--radius);
-    border: 1px solid color-mix(in oklab, #c42b1c 50%, var(--color-border));
-    background: color-mix(in oklab, #c42b1c 12%, transparent);
+    border: 1px solid var(--color-border);
+    background: var(--color-code-bg);
     color: var(--color-text);
     font-size: 0.98rem;
   }
 
+  .contact__success {
+    max-width: 32rem;
+    margin-top: var(--space-xl);
+    padding: var(--space-lg);
+    border: 1px solid var(--color-border);
+    background: var(--color-code-bg);
+  }
+
+  .contact__success-title {
+    margin: 0 0 var(--space-sm);
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .contact__success p {
+    margin: 0;
+    color: var(--color-muted);
+  }
+
   .contact__setup pre {
     margin: var(--space-md) 0;
-    padding: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
     overflow: auto;
-    border-radius: var(--radius);
-    border: 1px solid var(--color-border);
-    background: color-mix(in oklab, var(--color-bg) 90%, var(--color-border));
-    font-size: 0.9rem;
+    border: 1px solid var(--color-code-border);
+    background: var(--color-code-bg);
+    font-size: 0.875rem;
   }
 
   .contact__form {
@@ -211,7 +233,7 @@ const thanksPath = "/contact/thanks";
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
-    font-weight: 600;
+    font-weight: 400;
     font-size: 0.95rem;
     color: var(--color-text);
   }
@@ -226,7 +248,6 @@ const thanksPath = "/contact/thanks";
     font: inherit;
     color: var(--color-text);
     padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius);
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     width: 100%;
@@ -240,18 +261,17 @@ const thanksPath = "/contact/thanks";
 
   .contact__submit {
     font: inherit;
-    font-weight: 600;
+    font-weight: 400;
     cursor: pointer;
     align-self: flex-start;
     padding: var(--space-sm) var(--space-xl);
-    border-radius: var(--radius);
-    border: 1px solid var(--color-accent);
-    background: color-mix(in oklab, var(--color-accent) 22%, var(--color-bg));
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
     color: var(--color-text);
   }
 
   .contact__submit:hover {
-    background: color-mix(in oklab, var(--color-accent) 32%, var(--color-bg));
+    background: var(--color-code-bg);
   }
 
   .contact__submit:disabled {
