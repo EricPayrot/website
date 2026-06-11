@@ -3,22 +3,110 @@ import { Image, getImage } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import defaultHero from "../../assets/placeholders/hero-landscape.svg";
+import { artist, siteName } from "../../config/site";
 import { workHasFacet } from "../../utils/facets";
+import coverImage from "../../assets/works/sheet-linked/couverture/couverture.jpg";
+import imgCosmos from "../../assets/works/sheet-linked/img_1291r/IMG_1291R.png";
+import imgChance from "../../assets/works/sheet-linked/img_1840r/IMG_1840R.png";
+import imgHuman from "../../assets/works/sheet-linked/img_0345r/IMG_0345R.jpg";
+import imgProcess from "../../assets/works/sheet-linked/collage_process_buzan/Collage_process_Buzan.jpeg";
+import imgEdition from "../../assets/works/sheet-linked/book_in_situ/Book_in_situ.jpeg";
 
 const description =
-  "New book — browse the cover and interior spreads with an interactive page-flip preview.";
+  "Fragments: Collage of Chance and Order — one hundred collages exploring chaos, balance, and the space between the infinitely small and the infinitely large.";
 
-const heroGlob = import.meta.glob<{ default: ImageMetadata }>(
-  "/src/assets/book/hero.{jpg,jpeg,png,gif,webp,svg}",
-  { eager: true },
-);
+/** Replace with your order link when ready. */
+const buyBookUrl = "#";
 
-function sortedGlobKeys(record: Record<string, unknown>): string[] {
-  return Object.keys(record).sort((a, b) =>
-    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
-  );
-}
+const authorName = artist.name === "Your Name" ? siteName : artist.name;
+
+type ContentSection = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  paragraphs: string[];
+  image: ImageMetadata;
+  imageAlt: string;
+  reverse?: boolean;
+  specs?: string[];
+  showCta?: boolean;
+};
+
+const contentSections: ContentSection[] = [
+  {
+    id: "cosmos",
+    eyebrow: "Cosmos",
+    title: "Fragments of a Larger Whole",
+    image: imgCosmos,
+    imageAlt: "Collage with horizon, sky, and scattered forms",
+    paragraphs: [
+      "These collages are made from small pieces, but they speak about large things.",
+      "Across the pages appear horizons, oceans, skies, stars, moons, explosions of light and fields of color. Shapes drift through space like planets, comets or particles in motion. A torn edge becomes a coastline. A spray of dots becomes a galaxy.",
+      "The collage process itself echoes the story of the universe: separate elements gathering, colliding and finding temporary forms. Piece by piece, a world emerges.",
+    ],
+  },
+  {
+    id: "chance-and-order",
+    eyebrow: "Chance and Order",
+    title: "Two Ways of Looking",
+    reverse: true,
+    image: imgChance,
+    imageAlt: "Paired collage forms suggesting pattern and scatter",
+    paragraphs: [
+      "Every image in the book is paired with another on a facing page.",
+      "Often the same visual language appears in both, but transformed. On one side, shapes float freely, scattered and unpredictable. On the other, they settle into patterns, alignments and structures.",
+      "Together, the pairs explore a tension found throughout nature: between randomness and organization, movement and stability, disorder and harmony.",
+      "Like crystals forming from chaos, or stars emerging from clouds of dust, order appears without erasing chance.",
+    ],
+  },
+  {
+    id: "human-presence",
+    eyebrow: "Human Presence",
+    title: "Small Figures, Vast Spaces",
+    image: imgHuman,
+    imageAlt: "Collage with small stick figures in a wide field",
+    paragraphs: [
+      "Tiny stick figures appear throughout the book.",
+      "They are simple marks, almost an afterthought, yet they change the scale of everything around them. Shapes become mountains. Circles become planets. Empty spaces become landscapes waiting to be explored.",
+      "These small characters remind us how tiny we are within a much larger universe. Yet they are never overwhelmed by it. They wave, greet one another, raise their arms in celebration.",
+      "In a world of constant transformation, they bring a quiet sense of joy and hope.",
+    ],
+  },
+  {
+    id: "the-process",
+    eyebrow: "The Process",
+    title: "One Thousand Attempts",
+    reverse: true,
+    image: imgProcess,
+    imageAlt: "Collage process photograph by Buzan",
+    paragraphs: [
+      "The project began as a game with rules.",
+      "One small format. Three collages every day. One thousand collages over the course of a year.",
+      "The materials are humble: papers gathered during travels, magazine fragments, packaging, ink marks, paint, accidental textures. Some pieces are carefully cut, others simply torn by hand.",
+      "The process welcomes accidents. Unrelated fragments meet, overlap and suggest unexpected meanings. Through repetition and experimentation, chance gradually reveals connections.",
+      "From one thousand collages, one hundred were selected to form this book.",
+    ],
+  },
+  {
+    id: "the-book",
+    eyebrow: "The Book",
+    title: "About the Edition",
+    image: imgEdition,
+    imageAlt: "Fragments book shown in situ",
+    paragraphs: [
+      "Fragments: Collage of Chance and Order presents one hundred selected collages reproduced in full color and arranged as fifty visual pairings.",
+      "Printed in a carefully designed edition, the book invites readers to move slowly through a sequence of images that shifts between cosmos and landscape, abstraction and storytelling, chaos and balance.",
+    ],
+    specs: [
+      "Self published",
+      "111 pages",
+      "Price: 25 €",
+      "A5 format (15.5 × 21 cm)",
+      "ISBN: 979-10-415-8800-8",
+    ],
+    showCta: true,
+  },
+];
 
 type BookPageSource = {
   src: ImageMetadata;
@@ -70,41 +158,86 @@ const bookPages = await Promise.all(
 );
 
 const bookPagesJson = JSON.stringify(bookPages);
-
-const heroKeys = sortedGlobKeys(heroGlob);
-const heroImage =
-  bookWorks[0]?.src ??
-  (heroKeys.length > 0 ? heroGlob[heroKeys[0]].default : defaultHero);
 ---
 
 <BaseLayout title="Fragments" description={description} canonicalPath="/book">
-  <h1 class="page-title">Fragments</h1>
+  <article class="book-page">
+    <section class="book-hero book-split" aria-labelledby="book-hero-heading">
+      <div class="book-split__copy book-hero__copy">
+        <p class="book-hero__label">Fragments</p>
+        <h1 id="book-hero-heading" class="book-hero__title">
+          Collage of Chance and Order
+        </h1>
+        <p class="book-hero__lede">
+          A book of one hundred collages exploring the space between chaos and balance, chance
+          and intention, the infinitely small and the infinitely large.
+        </p>
+        <p>
+          Created from found papers, ink, paint and simple geometric forms, these images drift
+          between landscapes, galaxies, oceans and imagined worlds.
+        </p>
+        <p class="book-hero__byline">By {authorName}</p>
+        <p class="book-hero__cta-wrap">
+          <a class="book-cta" href={buyBookUrl}>Buy the Book</a>
+        </p>
+      </div>
+      <div class="book-split__media book-hero__media">
+        <Image
+          src={coverImage}
+          alt="Cover of Fragments: Collage of Chance and Order"
+          widths={[480, 720, 960, 1200]}
+          sizes="(max-width: 768px) 100vw, min(480px, 45vw)"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+          class="book-split__img"
+        />
+      </div>
+    </section>
 
-  <p class="book-page__intro lede muted">
-    Replace hero and page scans in{" "}
-    <code>src/assets/book/</code> (see <code>README.md</code> there). Introduction and publication
-    notes go in <code>src/pages/book/index.astro</code>.
-  </p>
-
-  <section class="book-page__hero" aria-label="Book cover teaser">
-    <div class="book-page__hero-frame">
-      <Image
-        src={heroImage}
-        alt=""
-        widths={[640, 960, 1200]}
-        sizes="(max-width: 900px) 100vw, min(920px, 85vw)"
-        loading="eager"
-        decoding="async"
-        class="book-page__hero-img"
-      />
-    </div>
-  </section>
-
-  <div class="book-page__body prose">
-    <p>
-      Use this section for synopsis, imprint, specs, ordering links, related exhibitions, etc.
-    </p>
-  </div>
+    {
+      contentSections.map((section) => (
+        <section
+          class:list={["book-split", "book-section", { "book-split--reverse": section.reverse }]}
+          id={section.id}
+          aria-labelledby={`${section.id}-heading`}
+        >
+          <div class="book-split__media">
+            <Image
+              src={section.image}
+              alt={section.imageAlt}
+              widths={[480, 720, 960]}
+              sizes="(max-width: 768px) 100vw, 50vw"
+              loading="lazy"
+              decoding="async"
+              class="book-split__img"
+            />
+          </div>
+          <div class="book-split__copy">
+            <p class="book-section__eyebrow">{section.eyebrow}</p>
+            <h2 id={`${section.id}-heading`} class="book-section__title">
+              {section.title}
+            </h2>
+            {section.paragraphs.map((paragraph) => (
+              <p>{paragraph}</p>
+            ))}
+            {section.specs && (
+              <ul class="book-section__specs">
+                {section.specs.map((item) => (
+                  <li>{item}</li>
+                ))}
+              </ul>
+            )}
+            {section.showCta && (
+              <p class="book-section__cta-wrap">
+                <a class="book-cta" href={buyBookUrl}>Buy the Book</a>
+              </p>
+            )}
+          </div>
+        </section>
+      ))
+    }
+  </article>
 
   <section class="book-page__gallery" aria-labelledby="book-gallery-heading">
     <h2 id="book-gallery-heading" class="book-page__gallery-title">Browse the book</h2>
@@ -491,33 +624,139 @@ const heroImage =
 </style>
 
 <style>
-  .book-page__intro code {
-    font-size: 0.88em;
+  :global(main:has(.book-page)) {
+    max-width: 72rem;
   }
 
-  .book-page__hero {
-    margin: var(--space-xl) 0;
+  .book-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-section);
+    margin-bottom: var(--space-section);
   }
 
-  .book-page__hero-frame {
-    max-height: min(520px, 55vh);
+  .book-split {
+    display: grid;
+    gap: var(--space-xl);
+    align-items: center;
   }
 
-  .book-page__hero-img {
+  @media (min-width: 768px) {
+    .book-split {
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(2rem, 5vw, 4rem);
+    }
+
+    .book-split--reverse .book-split__media {
+      order: 2;
+    }
+
+    .book-split--reverse .book-split__copy {
+      order: 1;
+    }
+  }
+
+  .book-split__img {
     width: 100%;
-    height: 100%;
-    max-height: min(520px, 55vh);
-    object-fit: cover;
-    object-position: center;
+    height: auto;
     display: block;
   }
 
-  .book-page__body {
-    margin-bottom: var(--space-xl);
+  .book-split__copy p {
+    margin: 0 0 var(--space-md);
+    color: var(--color-text-secondary);
+    line-height: 1.65;
+  }
+
+  .book-split__copy p:last-child {
+    margin-bottom: 0;
+  }
+
+  .book-hero__label {
+    margin: 0 0 var(--space-sm);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .book-hero__title {
+    margin: 0 0 var(--space-md);
+    font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-text);
+  }
+
+  .book-hero__lede {
+    font-size: 1.0625rem;
+    color: var(--color-text);
+  }
+
+  .book-hero__byline {
+    margin-top: var(--space-lg) !important;
+    color: var(--color-text) !important;
+    font-weight: 700;
+  }
+
+  .book-hero__cta-wrap,
+  .book-section__cta-wrap {
+    margin-top: var(--space-lg) !important;
+    margin-bottom: 0 !important;
+  }
+
+  .book-section__eyebrow {
+    margin: 0 0 var(--space-sm);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .book-section__title {
+    margin: 0 0 var(--space-md);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--color-text);
+  }
+
+  .book-section__specs {
+    margin: var(--space-md) 0 0;
+    padding-left: 1.25rem;
+    color: var(--color-text-secondary);
+  }
+
+  .book-section__specs li {
+    margin-bottom: var(--space-xs);
+  }
+
+  .book-cta {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid var(--color-text);
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .book-cta:hover {
+    background: var(--color-code-bg);
+    color: var(--color-text);
+  }
+
+  .book-cta:visited {
+    color: var(--color-text);
   }
 
   .book-page__gallery {
     margin-top: var(--space-section);
+    padding-top: var(--space-section);
+    border-top: 1px solid var(--color-border);
   }
 
   .book-page__gallery-title {
@@ -528,7 +767,7 @@ const heroImage =
 
   .book-page__gallery-hint {
     margin: 0 0 var(--space-lg);
-    max-width: 38rem;
+    max-width: 42rem;
   }
 
   .book-page__flip-mount {
