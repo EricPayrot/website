@@ -2,8 +2,8 @@
 """
 Import one artwork per spreadsheet row:
   • `publish` must be non-empty or the row is skipped
-  • `file` stem → Markdown slug; symlink basename → `alt` + `page` (see README)
-  • `path` → symlink target (original stays on disk)
+  • `file` stem → Markdown slug; asset basename → `alt` + `page` (see README)
+  • `path` → source image; a copy is stored under `sheet-linked/` (for deploy)
   • `collections`, `colors`, … → YAML facets (comma-separated in the sheet)
   • Prefer a **CSV export** (`csv_path` in config.yaml or `--csv`) — no Google credentials.
   • Or read live via **Google Sheets API** (`spreadsheet_id` + credentials) if `csv_path` is unset.
@@ -157,15 +157,37 @@ def unique_image_basename(stem: str, ext: str, used: set[str]) -> str:
             raise ValueError(f"too many duplicate image names for stem {stem!r}")
 
 
-def ensure_symlink(asset_path: Path, source: Path) -> None:
+def materialize_symlinks(assets_root: Path) -> tuple[int, int]:
+    """Replace symlinks under assets_root with real file copies (for git / CI deploy)."""
+    done = 0
+    broken = 0
+    if not assets_root.is_dir():
+        return done, broken
+    for link in sorted(assets_root.rglob("*")):
+        if not link.is_symlink():
+            continue
+        target = link.resolve()
+        if not target.is_file():
+            print(f"[warn] broken symlink: {link} -> {link.readlink()}", file=sys.stderr)
+            broken += 1
+            continue
+        tmp = link.with_name(link.name + ".materializing")
+        shutil.copy2(target, tmp)
+        link.unlink()
+        tmp.rename(link)
+        done += 1
+    return done, broken
+
+
+def ensure_asset_copy(asset_path: Path, source: Path) -> None:
     src = Path(source).expanduser().resolve()
-    if not src.exists():
+    if not src.is_file():
         raise FileNotFoundError(f"Source image does not exist: {src}")
 
     if asset_path.is_symlink() or asset_path.exists():
         asset_path.unlink()
 
-    asset_path.symlink_to(src, target_is_directory=False)
+    shutil.copy2(src, asset_path)
 
 
 def rel_image_from_work_md(slug: str, basename: str) -> str:
@@ -337,14 +359,14 @@ def prepare_single_image(
     else:
         fname = unique_image_basename(stem, resolved.suffix, used_image_basenames)
 
-    symlink_dest = slug_dir / fname
+    asset_dest = slug_dir / fname
 
     images = [{"src": rel_image_from_work_md(slug, fname), "alt": alt}]
     og_rel: str | None = None
 
     if not dry_run:
         clear_slug_asset_dir(slug_dir)
-        ensure_symlink(symlink_dest, resolved)
+        ensure_asset_copy(asset_dest, resolved)
 
     if og_cell and og_cell.strip():
         og_resolved = resolve_image_source(og_cell.strip())
@@ -356,7 +378,7 @@ def prepare_single_image(
             raise FileNotFoundError(f"og_image missing: {og_resolved}")
         og_name = "og" + (og_resolved.suffix or ".jpg")
         if not dry_run:
-            ensure_symlink(slug_dir / og_name, og_resolved)
+            ensure_asset_copy(slug_dir / og_name, og_resolved)
         og_rel = rel_image_from_work_md(slug, og_name)
 
     return images, og_rel
@@ -713,6 +735,11 @@ def main() -> int:
         metavar="PATH",
         help="Override csv_path from config / use this CSV file.",
     )
+    parser.add_argument(
+        "--materialize-symlinks",
+        action="store_true",
+        help="Replace symlinks under sheet-linked/ with real file copies (commit before deploy).",
+    )
 
     ns = parser.parse_args()
     cfg_file = ns.config.expanduser().resolve()
@@ -748,6 +775,14 @@ def main() -> int:
 
     assets_root, content_dir = resolve_repo_paths(cfg_data, cfg_file)
     print("[info]", assets_root, "|", content_dir, file=sys.stderr)
+
+    if ns.materialize_symlinks:
+        done, broken = materialize_symlinks(assets_root)
+        print(f"[done] Materialized {done} symlink(s).")
+        if broken:
+            print(f"[warn] {broken} broken symlink(s) could not be resolved.", file=sys.stderr)
+            return 1
+        return 0
 
     rows = build_rows(cfg_with_mode)
     return process_rows(rows, hdr_cfg, assets_root, content_dir, dry_run=ns.dry_run)

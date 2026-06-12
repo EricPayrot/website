@@ -1,6 +1,6 @@
 # Import works from CSV (or Google Sheets)
 
-Generates Astro content (`src/content/works/<slug>.md`) plus **symlinks** under `src/assets/works/sheet-linked/<slug>/`. Original pixels stay wherever `path` points.
+Generates Astro content (`src/content/works/<slug>.md`) plus **copies** of each image under `src/assets/works/sheet-linked/<slug>/` (real files in git — required for Cloudflare/Netlify deploy). Originals stay wherever `path` points.
 
 ## Recommended: CSV export (no Google API)
 
@@ -40,8 +40,8 @@ One **row per artwork**, **one linked image**:
 | **`publish`** | Required gate: row is **skipped** when this cell is **empty**. Any non-empty marker (x, yes, draft,…) imports the row. |
 | **`file`** | Source filename on disk (used with **`path`** when `path` is a folder). **Stem becomes the Markdown slug** (e.g. `Study-12.tif` → `study-12.md`). If `file` is empty but `path` is set, the slug comes from **`path`**’s basename stem. |
 | **`path`** | Path to the image **file**, **or** the **folder** that contains it. If `path` is a folder, **`file`** must be the exact filename inside that folder (otherwise the symlink will point at the directory and thumbnails break). |
-| **`alt`** | Image `alt` text (also used with **`page`** to name the symlink under `sheet-linked/<slug>/`). Fallback for `alt` is derived from the source filename if blank. |
-| **`page`** | Page reference → frontmatter when filled; combined with **`alt`** as `alt + " " + page` for the symlink basename (e.g. `Coast study 25.jpg`). Duplicate names get a suffix (`a`, `b`, …). |
+| **`alt`** | Image `alt` text (also used with **`page`** to name the file under `sheet-linked/<slug>/`). Fallback for `alt` is derived from the source filename if blank. |
+| **`page`** | Page reference → frontmatter when filled; combined with **`alt`** as `alt + " " + page` for the asset basename (e.g. `Coast study 25.jpg`). Duplicate names get a suffix (`a`, `b`, …). |
 | **`title`** | Work title. |
 | **`description`** | Short description → frontmatter (`(No description)` if blank). |
 | **`year`**, **`medium`**, **`dimensions`** | Passed through when filled. |
@@ -78,9 +78,7 @@ python import_works.py
 
 **Paths:** Relative `path` entries resolve relative to **`cwd`** when invoking the script. Prefer absolute paths if your assets live elsewhere.
 
-**Windows:** file symlinks may need Developer Mode or admin rights.
-
-**Duplicate filenames:** Rows that resolve to the same slug **overwrite** the previous Markdown + symlinks — a warning is printed.
+**Duplicate filenames:** Rows that resolve to the same slug **overwrite** the previous Markdown + assets — a warning is printed.
 
 ## Pruning unpublished works
 
