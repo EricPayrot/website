@@ -6,7 +6,7 @@ import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import SideNav from "../components/navigation/SideNav.astro";
 import SiteFooter from "../components/navigation/SiteFooter.astro";
-import { siteName } from "../config/site";
+import { siteName, gaMeasurementId } from "../config/site";
 import { absoluteUrl } from "../utils/urls";
 
 interface Props {
@@ -35,7 +35,7 @@ const jsonLdBlocks = jsonLd
     : [jsonLd]
   : [];
 
-const gaId = (import.meta.env.PUBLIC_GA_MEASUREMENT_ID ?? "").trim();
+const gaId = gaMeasurementId.trim();
 ---
 
 <!doctype html>

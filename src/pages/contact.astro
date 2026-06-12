@@ -1,11 +1,11 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { siteName } from "../config/site";
+import { siteName, web3formsAccessKey } from "../config/site";
 
 const description =
   "Send a message — inquiries about works, exhibitions, or commissions.";
 
-const accessKey = (import.meta.env.PUBLIC_WEB3FORMS_ACCESS_KEY ?? "").trim();
+const accessKey = web3formsAccessKey.trim();
 const formReady = accessKey.length > 0;
 const mailSubject = `${siteName} — contact form`;
 
@@ -22,14 +22,9 @@ const mailSubject = `${siteName} — contact form`;
     !formReady ? (
       <div class="contact__setup prose">
         <p>
-          <strong>Form not configured yet.</strong> Create a key at{" "}
-          <a href="https://web3forms.com">web3forms.com</a>, then add it to a{" "}
-          <code>.env</code> file in the project root:
-        </p>
-        <pre><code>PUBLIC_WEB3FORMS_ACCESS_KEY=your_key_here</code></pre>
-        <p>
-          Restart the dev server and rebuild for production. The key is safe to expose in static
-          HTML (see Web3Forms docs).
+          <strong>Form not configured yet.</strong> Add <code>web3formsAccessKey</code> in{" "}
+          <code>src/config/site.ts</code> (get a key at{" "}
+          <a href="https://web3forms.com">web3forms.com</a>).
         </p>
       </div>
     ) : (

@@ -29,3 +29,9 @@ export const artist = {
 
 export const DEFAULT_DESCRIPTION =
   "Contemporary artist portfolio — paintings, works on paper, and selected projects.";
+
+/** GA4 measurement ID — public, embedded in page HTML at build time. */
+export const gaMeasurementId = "G-B1RJGSEWEP";
+
+/** Web3Forms access key — public, used in the contact form (domain-restricted on Web3Forms). */
+export const web3formsAccessKey = "b23a199b-7071-4c54-b768-959a04472dc4";
