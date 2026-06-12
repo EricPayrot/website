@@ -2,7 +2,7 @@
 export const siteName = "Eric Payrot";
 
 /** Canonical origin (no trailing slash). Must match `site` in `astro.config.ts`. */
-export const siteOrigin = "https://example.com";
+export const siteOrigin = "https://www.ericpayrot.com";
 
 export const siteUrl = new URL(siteOrigin);
 
