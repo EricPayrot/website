@@ -8,6 +8,6 @@ facets:
   - collage_book
 catalog_source: spreadsheet-import
 images:
-- src: ../../assets/works/sheet-linked/book_in_situ/Book_in_situ.jpeg
-  alt: Book In Situ
+- src: ../../assets/works/sheet-linked/book_in_situ/Eric Payrot Fragments Book.jpeg
+  alt: Eric Payrot Fragments Book
 ---

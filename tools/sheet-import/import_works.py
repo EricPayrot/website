@@ -2,7 +2,7 @@
 """
 Import one artwork per spreadsheet row:
   • `publish` must be non-empty or the row is skipped
-  • `file` basename → symlink name; stem → Markdown slug (`src/content/works/<slug>.md`)
+  • `file` stem → Markdown slug; symlink basename → `alt` + `page` (see README)
   • `path` → symlink target (original stays on disk)
   • `collections`, `colors`, … → YAML facets (comma-separated in the sheet)
   • Prefer a **CSV export** (`csv_path` in config.yaml or `--csv`) — no Google credentials.
@@ -17,6 +17,7 @@ import argparse
 import csv
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -67,6 +68,8 @@ FACET_KEYS = (
     "influences",
 )
 
+IMPORT_CATALOG_SOURCE = "spreadsheet-import"
+
 
 def split_list_cell(cell: Any) -> list[str] | None:
     if cell is None or str(cell).strip() == "":
@@ -91,6 +94,67 @@ def sanitize_facet_token(s: str) -> str:
 def human_from_filename(val: Path) -> str:
     stem = val.stem.replace("_", " ").replace("-", " ").strip()
     return stem.title() if stem else "Artwork"
+
+
+def sanitize_image_filename_stem(name: str) -> str:
+    s = name.strip()
+    s = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", s)
+    s = re.sub(r"\s+", " ", s)
+    s = s.strip(" .")
+    if not s:
+        raise ValueError("empty image name after sanitisation")
+    if len(s) > 200:
+        s = s[:200].rstrip(" .")
+    return s
+
+
+def image_stem_from_alt_page(alt: str | None, page: str | None) -> str:
+    alt_s = (alt or "").strip()
+    page_s = (page or "").strip()
+    if alt_s and page_s:
+        combined = f"{alt_s} {page_s}"
+    elif alt_s:
+        combined = alt_s
+    elif page_s:
+        combined = page_s
+    else:
+        return ""
+    return sanitize_image_filename_stem(combined)
+
+
+def unique_image_basename(stem: str, ext: str, used: set[str]) -> str:
+    """Build a basename from stem + ext; append a, b, c, … when names collide."""
+    ext = ext or ".jpg"
+    if not ext.startswith("."):
+        ext = f".{ext}"
+
+    def full(st: str, suffix: str = "") -> str:
+        name = f"{st} {suffix}".strip() if suffix else st
+        return f"{name}{ext}"
+
+    candidate = full(stem)
+    key = candidate.casefold()
+    if key not in used:
+        used.add(key)
+        return candidate
+
+    for code in range(ord("a"), ord("z") + 1):
+        candidate = full(stem, chr(code))
+        key = candidate.casefold()
+        if key not in used:
+            used.add(key)
+            return candidate
+
+    n = 2
+    while True:
+        candidate = full(stem, str(n))
+        key = candidate.casefold()
+        if key not in used:
+            used.add(key)
+            return candidate
+        n += 1
+        if n > 9999:
+            raise ValueError(f"too many duplicate image names for stem {stem!r}")
 
 
 def ensure_symlink(asset_path: Path, source: Path) -> None:
@@ -236,14 +300,26 @@ def symlink_basename(file_cell: str, resolved: Path) -> str:
     return f"01{resolved.suffix or '.jpg'}"
 
 
+def clear_slug_asset_dir(slug_dir: Path) -> None:
+    if not slug_dir.is_dir():
+        return
+    for entry in slug_dir.iterdir():
+        if entry.is_symlink() or entry.is_file():
+            entry.unlink()
+        elif entry.is_dir():
+            shutil.rmtree(entry)
+
+
 def prepare_single_image(
     slug: str,
     *,
     path_cell: str | None,
     file_cell: str | None,
     alt_cell: str | None,
+    page_cell: str | None,
     og_cell: str | None,
     assets_root: Path,
+    used_image_basenames: set[str],
     dry_run: bool,
 ) -> tuple[list[dict[str, Any]], str | None]:
     resolved = resolve_artwork_file(path_cell, file_cell)
@@ -251,18 +327,23 @@ def prepare_single_image(
     slug_dir = assets_root / slug
     slug_dir.mkdir(parents=True, exist_ok=True)
 
-    fname = symlink_basename(str(file_cell or ""), resolved)
-    symlink_dest = slug_dir / fname
-    alt = ""
-    if alt_cell and alt_cell.strip():
-        alt = alt_cell.strip()
-    else:
+    alt = alt_cell.strip() if alt_cell and alt_cell.strip() else ""
+    if not alt:
         alt = human_from_filename(resolved)
+
+    stem = image_stem_from_alt_page(alt_cell, page_cell)
+    if not stem:
+        fname = symlink_basename(str(file_cell or ""), resolved)
+    else:
+        fname = unique_image_basename(stem, resolved.suffix, used_image_basenames)
+
+    symlink_dest = slug_dir / fname
 
     images = [{"src": rel_image_from_work_md(slug, fname), "alt": alt}]
     og_rel: str | None = None
 
     if not dry_run:
+        clear_slug_asset_dir(slug_dir)
         ensure_symlink(symlink_dest, resolved)
 
     if og_cell and og_cell.strip():
@@ -358,6 +439,83 @@ def resolve_csv_path(cfg_file: Path, cfg_root: dict[str, Any]) -> Path | None:
     return p
 
 
+def frontmatter_catalog_source(md_path: Path) -> str | None:
+    """Return catalog_source from YAML frontmatter, or None if unreadable."""
+    try:
+        text = md_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if not text.startswith("---"):
+        return None
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return None
+    try:
+        fm = yaml.safe_load(parts[1])
+    except yaml.YAMLError:
+        return None
+    if not isinstance(fm, dict):
+        return None
+    raw = fm.get("catalog_source")
+    return str(raw).strip() if raw is not None else None
+
+
+def remove_import_asset_dir(assets_root: Path, slug: str) -> None:
+    slug_dir = (assets_root / slug).resolve()
+    root = assets_root.resolve()
+    if slug_dir.parent != root:
+        raise ValueError(f"refusing to remove path outside assets root: {slug_dir}")
+    if not slug_dir.exists():
+        return
+    if slug_dir.is_symlink():
+        slug_dir.unlink()
+    elif slug_dir.is_dir():
+        shutil.rmtree(slug_dir)
+    else:
+        slug_dir.unlink()
+
+
+def prune_stale_imports(
+    content_dir: Path,
+    assets_root: Path,
+    active_slugs: set[str],
+    *,
+    dry_run: bool,
+) -> int:
+    """Remove import-managed works (and symlinks) not in the current published set."""
+    if not content_dir.is_dir():
+        return 0
+
+    removed = 0
+    for md_path in sorted(content_dir.glob("*.md")):
+        slug = md_path.stem
+        if slug in active_slugs:
+            continue
+        if frontmatter_catalog_source(md_path) != IMPORT_CATALOG_SOURCE:
+            continue
+
+        asset_dir = assets_root / slug
+        if dry_run:
+            rel_md = md_path
+            try:
+                rel_md = md_path.relative_to(Path.cwd())
+            except ValueError:
+                pass
+            asset_note = (
+                f" + {asset_dir.relative_to(Path.cwd())}"
+                if asset_dir.exists()
+                else ""
+            )
+            print(f"[dry-run] prune → {rel_md}{asset_note}", file=sys.stderr)
+        else:
+            md_path.unlink()
+            remove_import_asset_dir(assets_root, slug)
+            print(f"[prune] removed {slug}", file=sys.stderr)
+        removed += 1
+
+    return removed
+
+
 def build_rows(cfg: dict[str, Any]) -> list[list[Any]]:
     if cfg.get("__csv_override"):
         p = Path(cfg["__csv_override"]).expanduser().resolve()
@@ -402,7 +560,9 @@ def process_rows(
 
     max_ix = max(name_to_ix.values())
     written = 0
+    active_slugs: set[str] = set()
     slug_rows: dict[str, int] = {}
+    used_image_basenames: set[str] = set()
 
     for ri, raw in enumerate(values[1:], start=2):
         padded = pad_row(raw or [], max_ix)
@@ -435,6 +595,7 @@ def process_rows(
                 file=sys.stderr,
             )
         slug_rows[slug] = ri
+        active_slugs.add(slug)
 
         title = lookup(padded, name_to_ix, title_h)
         description = lookup(padded, name_to_ix, hdr_cfg["description"])
@@ -475,8 +636,10 @@ def process_rows(
                 path_cell=path_val,
                 file_cell=file_val,
                 alt_cell=alt_val or "",
+                page_cell=page,
                 og_cell=ogs or None,
                 assets_root=assets_root,
+                used_image_basenames=used_image_basenames,
                 dry_run=dry_run,
             )
         except Exception as exc:  # noqa: BLE001
@@ -516,9 +679,25 @@ def process_rows(
             outfile.write_text(md_text.strip() + "\n", encoding="utf-8")
         written += 1
 
-    msg = "[done] Would write" if dry_run else "[done] Wrote"
-    print(f"{msg} {written} work Markdown file(s).")
-    return 0 if written else 1
+    pruned = prune_stale_imports(
+        content_dir,
+        assets_root,
+        active_slugs,
+        dry_run=dry_run,
+    )
+
+    write_msg = "[done] Would write" if dry_run else "[done] Wrote"
+    prune_msg = "[done] Would prune" if dry_run else "[done] Pruned"
+    print(f"{write_msg} {written} work Markdown file(s).")
+    if pruned:
+        print(f"{prune_msg} {pruned} stale import(s).")
+    elif not dry_run:
+        print("[done] No stale spreadsheet imports to remove.")
+
+    if written == 0 and pruned == 0:
+        print("[warn] No published rows imported and nothing pruned.", file=sys.stderr)
+        return 1
+    return 0
 
 
 def main() -> int:

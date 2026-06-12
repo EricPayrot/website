@@ -6,12 +6,25 @@ export const siteOrigin = "https://example.com";
 
 export const siteUrl = new URL(siteOrigin);
 
+export const socialLinks = [
+  {
+    name: "Instagram",
+    href: "https://www.instagram.com/ericpayrot/",
+    handle: "@ericpayrot",
+  },
+  {
+    name: "Facebook",
+    href: "https://www.facebook.com/epayrot",
+    handle: "epayrot",
+  },
+] as const;
+
 export const artist = {
-  name: "Your Name",
+  name: "Eric Payrot",
   /** Used in JSON-LD Person + copyright. */
   url: siteOrigin,
   /** SameAs links (optional): social profiles, gallery representation, etc. */
-  sameAs: [] as string[],
+  sameAs: socialLinks.map((link) => link.href),
 };
 
 export const DEFAULT_DESCRIPTION =

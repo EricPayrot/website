@@ -1,0 +1,284 @@
+---
+import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
+
+export type BookGalleryItem = {
+  src: ImageMetadata;
+  fullSrc: string;
+  alt: string;
+  label: string;
+};
+
+interface Props {
+  items: BookGalleryItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="book-gallery" data-book-gallery>
+  {
+    items.length === 0 ? (
+      <p class="book-gallery__empty muted">No book page images configured yet.</p>
+    ) : (
+      <ul class="book-grid" role="list">
+        {items.map((item) => (
+          <li class="book-grid__item">
+            <button
+              type="button"
+              class="book-grid__tile"
+              data-full-src={item.fullSrc}
+              data-alt={item.alt}
+              aria-label={item.alt || `View ${item.label}`}
+            >
+              <Image
+                src={item.src}
+                alt={item.alt}
+                widths={[140, 200, 280]}
+                sizes="(max-width: 640px) 33vw, 160px"
+                loading="lazy"
+                decoding="async"
+                class="book-grid__img"
+              />
+            </button>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <dialog class="book-lightbox" aria-label="Book page viewer" tabindex="-1">
+    <div class="book-lightbox__panel">
+      <div class="book-lightbox__stage">
+        <button
+          type="button"
+          class="book-lightbox__nav book-lightbox__nav--prev"
+          data-book-lightbox-action="prev"
+          aria-label="Previous page"
+        >
+          Previous
+        </button>
+        <figure class="book-lightbox__figure">
+          <img class="book-lightbox__img" alt="" decoding="async" />
+        </figure>
+        <button
+          type="button"
+          class="book-lightbox__nav book-lightbox__nav--next"
+          data-book-lightbox-action="next"
+          aria-label="Next page"
+        >
+          Next
+        </button>
+      </div>
+      <button
+        type="button"
+        class="book-lightbox__close"
+        data-book-lightbox-action="close"
+        aria-label="Close viewer"
+      >
+        Close
+      </button>
+    </div>
+  </dialog>
+</div>
+
+<script>
+  import { mountBookLightbox } from "../../scripts/interactions/book-lightbox";
+
+  document.querySelectorAll<HTMLElement>("[data-book-gallery]").forEach((root) => {
+    mountBookLightbox(root);
+  });
+</script>
+
+<style>
+  .book-gallery__empty {
+    margin: 0;
+  }
+
+  .book-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-md);
+  }
+
+  .book-grid__item {
+    margin: 0;
+  }
+
+  .book-grid__tile {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    aspect-ratio: 148 / 210;
+    overflow: hidden;
+  }
+
+  .book-grid__tile:hover .book-grid__img {
+    opacity: 0.92;
+  }
+
+  .book-grid__tile:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+
+  .book-grid__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .book-lightbox {
+    padding: 0;
+    border: none;
+    max-width: none;
+    max-height: none;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+  }
+
+  .book-lightbox::backdrop {
+    background: rgb(0 0 0 / 72%);
+  }
+
+  .book-lightbox:focus {
+    outline: none;
+  }
+
+  .book-lightbox__panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    box-sizing: border-box;
+    width: min(96vw, 56rem);
+    height: min(88vh, 44rem);
+    margin: 6vh auto;
+    padding: var(--space-lg);
+    padding-top: calc(var(--space-lg) + 2rem);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+  }
+
+  .book-lightbox__close {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+    font: inherit;
+    font-size: 0.875rem;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    cursor: pointer;
+  }
+
+  .book-lightbox__close:hover {
+    background: var(--color-code-bg);
+  }
+
+  .book-lightbox__close:focus {
+    outline: none;
+  }
+
+  .book-lightbox__close:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+
+  .book-lightbox__stage {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: stretch;
+    column-gap: var(--space-xs);
+    width: 100%;
+  }
+
+  .book-lightbox__figure {
+    margin: 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .book-lightbox__img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .book-lightbox__nav {
+    flex-shrink: 0;
+    font: inherit;
+    font-size: 0.875rem;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    cursor: pointer;
+    min-height: 44px;
+    align-self: center;
+    height: fit-content;
+  }
+
+  .book-lightbox__nav--prev {
+    justify-self: start;
+  }
+
+  .book-lightbox__nav--next {
+    justify-self: end;
+  }
+
+  .book-lightbox__nav:hover:not(:disabled) {
+    background: var(--color-code-bg);
+  }
+
+  .book-lightbox__nav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 540px) {
+    .book-lightbox__panel {
+      height: min(92vh, 40rem);
+    }
+
+    .book-lightbox__stage {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto auto;
+      justify-items: stretch;
+      row-gap: var(--space-sm);
+    }
+
+    .book-lightbox__nav--prev {
+      order: 2;
+      justify-self: start;
+    }
+
+    .book-lightbox__figure {
+      order: 1;
+      min-height: 0;
+    }
+
+    .book-lightbox__nav--next {
+      order: 3;
+      justify-self: end;
+    }
+  }
+</style>

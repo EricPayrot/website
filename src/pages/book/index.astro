@@ -3,20 +3,20 @@ import { Image, getImage } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import BookThumbnailGrid from "../../components/book/BookThumbnailGrid.astro";
 import { artist, siteName } from "../../config/site";
 import { workHasFacet } from "../../utils/facets";
-import coverImage from "../../assets/works/sheet-linked/couverture/couverture.jpg";
-import imgCosmos from "../../assets/works/sheet-linked/img_1291r/IMG_1291R.png";
-import imgChance from "../../assets/works/sheet-linked/img_1840r/IMG_1840R.png";
-import imgHuman from "../../assets/works/sheet-linked/img_0345r/IMG_0345R.jpg";
+import coverImage from "../../assets/works/sheet-linked/couverture/Eric Payrot Fragments Book Cover.jpg";
+import imgCosmos from "../../assets/works/sheet-linked/img_1291r/Eric Payrot Fragments Book 32.png";
+import imgChance from "../../assets/works/sheet-linked/img_1840r/Eric Payrot Fragments Book 59.png";
+import imgHuman from "../../assets/works/sheet-linked/img_0345r/Eric Payrot Fragments Book 78.jpg";
 import imgProcess from "../../assets/works/sheet-linked/collage_process_buzan/Collage_process_Buzan.jpeg";
-import imgEdition from "../../assets/works/sheet-linked/book_in_situ/Book_in_situ.jpeg";
+import imgEdition from "../../assets/works/sheet-linked/book_in_situ/Eric Payrot Fragments Book.jpeg";
 
 const description =
   "Fragments: Collage of Chance and Order — one hundred collages exploring chaos, balance, and the space between the infinitely small and the infinitely large.";
 
-/** Replace with your order link when ready. */
-const buyBookUrl = "#";
+const buyBookUrl = "https://buy.stripe.com/8x26ozgPA2Vr2p3cZfejK00";
 
 const authorName = artist.name === "Your Name" ? siteName : artist.name;
 
@@ -127,7 +127,7 @@ function pageSortValue(page: string | number): number | null {
 const bookWorks = (await getCollection("works", ({ data }) => !data.draft))
   .filter(
     (entry) =>
-      workHasFacet(entry, "collections", "collage_book") &&
+      workHasFacet(entry, "collections", "book_gallery") &&
       entry.data.page != null &&
       String(entry.data.page).trim() !== "",
   )
@@ -146,18 +146,21 @@ const bookWorks = (await getCollection("works", ({ data }) => !data.draft))
   .filter((page): page is BookPageSource => page != null)
   .sort((a, b) => a.sortValue - b.sortValue);
 
-const bookPages = await Promise.all(
+function bookPageLabel(pageNumber: string): string {
+  return pageNumber.toLowerCase() === "cover" ? "Cover" : `Page ${pageNumber}`;
+}
+
+const bookGalleryItems = await Promise.all(
   bookWorks.map(async ({ src, alt, pageNumber }) => {
-    const optimized = await getImage({ src, width: 912 });
+    const full = await getImage({ src, width: 1600 });
     return {
-      src: optimized.src,
+      src,
+      fullSrc: full.src,
       alt,
-      pageNumber,
+      label: bookPageLabel(pageNumber),
     };
   }),
 );
-
-const bookPagesJson = JSON.stringify(bookPages);
 ---
 
 <BaseLayout title="Fragments" description={description} canonicalPath="/book">
@@ -168,6 +171,7 @@ const bookPagesJson = JSON.stringify(bookPages);
         <h1 id="book-hero-heading" class="book-hero__title">
           Collage of Chance and Order
         </h1>
+        <p class="book-hero__byline">By {authorName}</p>
         <p class="book-hero__lede">
           A book of one hundred collages exploring the space between chaos and balance, chance
           and intention, the infinitely small and the infinitely large.
@@ -176,9 +180,8 @@ const bookPagesJson = JSON.stringify(bookPages);
           Created from found papers, ink, paint and simple geometric forms, these images drift
           between landscapes, galaxies, oceans and imagined worlds.
         </p>
-        <p class="book-hero__byline">By {authorName}</p>
         <p class="book-hero__cta-wrap">
-          <a class="book-cta" href={buyBookUrl}>Buy the Book</a>
+          <a class="book-cta" href={buyBookUrl} target="_blank" rel="noopener noreferrer">Buy the Book</a>
         </p>
       </div>
       <div class="book-split__media book-hero__media">
@@ -230,7 +233,7 @@ const bookPagesJson = JSON.stringify(bookPages);
             )}
             {section.showCta && (
               <p class="book-section__cta-wrap">
-                <a class="book-cta" href={buyBookUrl}>Buy the Book</a>
+                <a class="book-cta" href={buyBookUrl} target="_blank" rel="noopener noreferrer">Buy the Book</a>
               </p>
             )}
           </div>
@@ -240,388 +243,14 @@ const bookPagesJson = JSON.stringify(bookPages);
   </article>
 
   <section class="book-page__gallery" aria-labelledby="book-gallery-heading">
-    <h2 id="book-gallery-heading" class="book-page__gallery-title">Browse the book</h2>
+    <h2 id="book-gallery-heading" class="book-page__gallery-title">Selected Pages</h2>
     <p class="book-page__gallery-hint muted">
-      View uses <strong>A5</strong> proportions (148×210 mm per page): the <strong>cover</strong>
-      fills the whole right page; inside spreads show a centred <strong>114×151 mm</strong> image
-      area (24 mm below top, 22 mm from the gutter). Turn with the <strong>right / left page</strong>{" "}
-      or arrow keys.
+  
     </p>
 
-    <!-- JSON consumed only by `/book` client script -->
-    <script
-      id="book-flip-data"
-      type="application/json"
-      set:html={bookPagesJson}
-    />
-
-    <div id="book-flip-root" class="book-page__flip-mount"></div>
+    <BookThumbnailGrid items={bookGalleryItems} />
   </section>
 </BaseLayout>
-
-<script>
-  import { mountBookFlip } from "../../scripts/interactions/book-flip";
-
-  const root = document.getElementById("book-flip-root");
-  const payload = document.getElementById("book-flip-data");
-  if (root && payload) {
-    try {
-      type BookPagePayload = {
-        src: string;
-        alt: string;
-        pageNumber: string;
-      };
-      const pages = JSON.parse(
-        payload.textContent || "[]",
-      ) as BookPagePayload[];
-      mountBookFlip(root, pages);
-    } catch {
-      root.innerHTML = "<p>Could not load the book viewer.</p>";
-    }
-  }
-</script>
-
-<style is:global>
-  /*
-   * A5 portrait: page 148 × 210 mm. Interior frames are centred at the original
-   * 114 × 151 mm position, scaled up 10% to reduce the white margins.
-   * inner edge(s) ↔ spread centre gap 22 mm (→ 12 mm outer margins on spine/fore-edge).
-   * Cover on first spread: full-page image on the right only.
-   */
-  .book-flip-root {
-    --bf-gutter-w: 2px;
-    --bf-mm-page-w: 148;
-    --bf-mm-page-h: 210;
-    --bf-mm-frame-w: 125.4;
-    --bf-mm-frame-h: 166.1;
-    --bf-mm-frame-top: 16.45;
-    --bf-mm-from-centre: 16.3;
-    --bf-mm-outer-margin: 6.3;
-  }
-
-  .book-flip__live {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .book-flip__empty {
-    margin: 0;
-    padding: var(--space-lg);
-    border: 1px dashed var(--color-border);
-    color: var(--color-muted);
-  }
-
-  .book-flip__toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-md);
-  }
-
-  .book-flip__btn {
-    font: inherit;
-    font-weight: 400;
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--color-border);
-    background: var(--color-bg);
-    color: var(--color-text);
-    cursor: pointer;
-    min-height: 44px;
-  }
-
-  .book-flip__btn:hover:not(:disabled) {
-    background: var(--color-code-bg);
-  }
-
-  .book-flip__btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-
-  .book-flip__stage {
-    position: relative;
-    max-width: calc(840px + var(--bf-gutter-w));
-    margin: 0 auto;
-    border: 1px solid var(--color-border);
-    perspective: 1850px;
-    transform-style: preserve-3d;
-    overflow: visible;
-    background: var(--color-code-bg);
-    padding: clamp(10px, 2vw, 18px);
-  }
-
-  .book-flip__spread {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: center;
-    width: 100%;
-    gap: 0;
-  }
-
-  /* Pre-rendered next/previous spread (under peeling half; shows through during flip) */
-  .book-flip__rear.book-flip__spread {
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .book-flip__half--rear-passive {
-    pointer-events: none !important;
-    cursor: default !important;
-  }
-
-  .book-flip__half--rear-passive.book-flip__half--clickable:hover {
-    box-shadow: none;
-  }
-
-  /* Make the peeled column transparent so the rear layer reads through */
-  .book-flip__half--peel-slot-forward.book-flip__half--right {
-    background: transparent !important;
-  }
-
-  .book-flip__half--peel-slot-forward.book-flip__half--right .book-flip__sheet {
-    opacity: 0 !important;
-  }
-
-  .book-flip__half--peel-slot-back.book-flip__half--left {
-    background: transparent !important;
-  }
-
-  .book-flip__half--peel-slot-back.book-flip__half--left .book-flip__sheet {
-    opacity: 0 !important;
-  }
-
-  .book-flip__half {
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    position: relative;
-    background: #fff;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .book-flip__half {
-      background: #fff;
-      color-scheme: light;
-    }
-  }
-
-  .book-flip__half--inactive {
-    pointer-events: none;
-    background: #fafafa;
-  }
-
-  .book-flip__half--clickable {
-    cursor: pointer;
-  }
-
-  .book-flip__half--clickable:hover {
-    background: #f4f4f4;
-  }
-
-  .book-flip__half:focus-visible {
-    outline: 2px solid var(--color-text);
-    outline-offset: -6px;
-    z-index: 1;
-  }
-
-  .book-flip__gutter {
-    align-self: stretch;
-    width: var(--bf-gutter-w);
-    flex-shrink: 0;
-    background: var(--color-border);
-  }
-
-  .book-flip__sheet {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    background: transparent;
-    overflow: visible;
-  }
-
-  .book-flip__sheet--blank {
-    pointer-events: none;
-  }
-
-  .book-flip__page-face {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 148 / 210;
-    background: #fff;
-    box-sizing: border-box;
-    flex-shrink: 0;
-    border: 1px solid var(--color-border);
-  }
-
-  .book-flip__page-face--blank {
-    background: #f4f4f4;
-    border: 1px solid var(--color-border);
-  }
-
-  .book-flip__frame {
-    box-sizing: border-box;
-    background: #fff;
-  }
-
-  /* Interior frames: identical size on left & right pages, centred from the original layout. */
-  .book-flip__frame--interior-left {
-    position: absolute;
-    left: calc(100% * var(--bf-mm-outer-margin) / var(--bf-mm-page-w));
-    top: calc(100% * var(--bf-mm-frame-top) / var(--bf-mm-page-h));
-    width: calc(100% * var(--bf-mm-frame-w) / var(--bf-mm-page-w));
-    height: calc(100% * var(--bf-mm-frame-h) / var(--bf-mm-page-h));
-  }
-
-  .book-flip__frame--interior-right {
-    position: absolute;
-    left: calc(100% * var(--bf-mm-from-centre) / var(--bf-mm-page-w));
-    top: calc(100% * var(--bf-mm-frame-top) / var(--bf-mm-page-h));
-    width: calc(100% * var(--bf-mm-frame-w) / var(--bf-mm-page-w));
-    height: calc(100% * var(--bf-mm-frame-h) / var(--bf-mm-page-h));
-  }
-
-  .book-flip__frame--cover {
-    position: absolute;
-    inset: 0;
-    border: none;
-    background: transparent;
-  }
-
-  .book-flip__img-wrap {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    box-sizing: border-box;
-    background: #fafafa;
-  }
-
-  .book-flip__frame--interior-left .book-flip__img-wrap,
-  .book-flip__frame--interior-right .book-flip__img-wrap {
-    background: #fff;
-  }
-
-  .book-flip__frame--cover .book-flip__img-wrap {
-    position: absolute;
-    inset: 0;
-    background: #fff;
-  }
-
-  .book-flip__img-wrap img {
-    user-select: none;
-    vertical-align: middle;
-  }
-
-  .book-flip__frame--interior-left .book-flip__img-wrap img,
-  .book-flip__frame--interior-right .book-flip__img-wrap img {
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-
-  .book-flip__frame--cover .book-flip__img-wrap img {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
-    display: block;
-    object-fit: cover;
-  }
-
-  /* Page numbers sit in bottom margin (~35 mm below interior frame midline) */
-  .book-flip__num {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: calc(100% * 10 / var(--bf-mm-page-h));
-    text-align: center;
-    margin: 0;
-    padding: 0;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.06em;
-    color: color-mix(in oklab, #333 82%, transparent);
-    line-height: 1;
-  }
-
-  .book-flip__num--cover {
-    display: none;
-  }
-
-  /* Flip leaf overlay */
-  .book-flip__leaf {
-    position: absolute;
-    z-index: 6;
-    pointer-events: none;
-    transform-style: preserve-3d;
-  }
-
-  .book-flip__leaf-inner {
-    width: 100%;
-    height: 100%;
-    transform-style: preserve-3d;
-    transition: transform 650ms cubic-bezier(0.45, 0, 0.2, 1);
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, #ffffff 72%, transparent),
-      8px 0 24px color-mix(in oklab, #000000 10%, transparent);
-    background: transparent;
-    backface-visibility: hidden;
-  }
-
-  .book-flip__leaf--forward .book-flip__leaf-inner {
-    transform-origin: left center;
-  }
-
-  .book-flip__leaf--forward.book-flip__leaf--rotating .book-flip__leaf-inner {
-    transform: rotateY(-176deg);
-  }
-
-  .book-flip__leaf--backward .book-flip__leaf-inner {
-    transform-origin: right center;
-  }
-
-  .book-flip__leaf--backward.book-flip__leaf--rotating .book-flip__leaf-inner {
-    transform: rotateY(176deg);
-  }
-
-  .book-flip__leaf-inner .book-flip__sheet {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-  }
-
-  .book-flip__leaf-inner .book-flip__page-face {
-    width: auto;
-    height: 100%;
-    max-width: 100%;
-    aspect-ratio: 148 / 210;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .book-flip__leaf-inner {
-      transition: none;
-    }
-  }
-</style>
 
 <style>
   :global(main:has(.book-page)) {
@@ -768,9 +397,5 @@ const bookPagesJson = JSON.stringify(bookPages);
   .book-page__gallery-hint {
     margin: 0 0 var(--space-lg);
     max-width: 42rem;
-  }
-
-  .book-page__flip-mount {
-    min-height: 8rem;
   }
 </style>

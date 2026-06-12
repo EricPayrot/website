@@ -38,12 +38,12 @@ One **row per artwork**, **one linked image**:
 | Header in CSV / sheet | Behaviour |
 |---|---|
 | **`publish`** | Required gate: row is **skipped** when this cell is **empty**. Any non-empty marker (x, yes, draft,…) imports the row. |
-| **`file`** | Canonical filename inside the symlink folder; **stem becomes the Markdown slug** (e.g. `Study-12.tif` → `study-12.md`). If `file` is empty but `path` is set, the slug comes from **`path`**’s basename stem. |
+| **`file`** | Source filename on disk (used with **`path`** when `path` is a folder). **Stem becomes the Markdown slug** (e.g. `Study-12.tif` → `study-12.md`). If `file` is empty but `path` is set, the slug comes from **`path`**’s basename stem. |
 | **`path`** | Path to the image **file**, **or** the **folder** that contains it. If `path` is a folder, **`file`** must be the exact filename inside that folder (otherwise the symlink will point at the directory and thumbnails break). |
-| **`alt`** | Image `alt` text; fallback is derived from the filename if blank. |
+| **`alt`** | Image `alt` text (also used with **`page`** to name the symlink under `sheet-linked/<slug>/`). Fallback for `alt` is derived from the source filename if blank. |
+| **`page`** | Page reference → frontmatter when filled; combined with **`alt`** as `alt + " " + page` for the symlink basename (e.g. `Coast study 25.jpg`). Duplicate names get a suffix (`a`, `b`, …). |
 | **`title`** | Work title. |
 | **`description`** | Short description → frontmatter (`(No description)` if blank). |
-| **`page`** | Page reference → frontmatter when filled. |
 | **`year`**, **`medium`**, **`dimensions`** | Passed through when filled. |
 
 Comma‑separated taxonomy (each token is normalised to a kebab slug in YAML facets):
@@ -81,3 +81,13 @@ python import_works.py
 **Windows:** file symlinks may need Developer Mode or admin rights.
 
 **Duplicate filenames:** Rows that resolve to the same slug **overwrite** the previous Markdown + symlinks — a warning is printed.
+
+## Pruning unpublished works
+
+Each run syncs to the **`publish`** column:
+
+- Rows with a **non-empty** `publish` cell are imported (or updated).
+- Existing works with `catalog_source: spreadsheet-import` that are **not** in that published set are **removed** — both `src/content/works/<slug>.md` and `src/assets/works/sheet-linked/<slug>/`.
+- Hand-written works (no `catalog_source: spreadsheet-import`) are never deleted.
+
+Use `--dry-run` to see what would be written and pruned before changing files.
