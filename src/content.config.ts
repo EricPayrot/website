@@ -1,4 +1,5 @@
 import { defineCollection, z } from "astro:content";
+import { glob } from "astro/loaders";
 
 /**
  * Faceted tags per work. `collections` drives `/collections/[slug]` pages.
@@ -16,7 +17,7 @@ const facetsSchema = z
   .passthrough();
 
 const works = defineCollection({
-  type: "content",
+  loader: glob({ pattern: "**/[^_]*.{md,mdx}", base: "./src/content/works" }),
   schema: ({ image }) =>
     z.object({
       title: z.string(),
