@@ -23,3 +23,9 @@ pnpm-debug.log*
 tools/sheet-import/credentials.json
 tools/sheet-import/config.yaml
 
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
