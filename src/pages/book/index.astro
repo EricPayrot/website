@@ -270,10 +270,25 @@ const bookGalleryItems = await Promise.all(
     align-items: center;
   }
 
+  @media (max-width: 767px) {
+    .book-split__copy {
+      order: 1;
+    }
+
+    .book-split__media {
+      order: 2;
+    }
+  }
+
   @media (min-width: 768px) {
     .book-split {
       grid-template-columns: 1fr 1fr;
       gap: clamp(2rem, 5vw, 4rem);
+    }
+
+    .book-split__copy,
+    .book-split__media {
+      order: initial;
     }
 
     .book-split--reverse .book-split__media {
