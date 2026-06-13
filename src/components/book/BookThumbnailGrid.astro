@@ -200,12 +200,14 @@ const { items } = Astro.props;
     min-height: 0;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "prev figure next";
     align-items: stretch;
     column-gap: var(--space-xs);
     width: 100%;
   }
 
   .book-lightbox__figure {
+    grid-area: figure;
     margin: 0;
     min-width: 0;
     height: 100%;
@@ -238,10 +240,12 @@ const { items } = Astro.props;
   }
 
   .book-lightbox__nav--prev {
+    grid-area: prev;
     justify-self: start;
   }
 
   .book-lightbox__nav--next {
+    grid-area: next;
     justify-self: end;
   }
 
@@ -260,25 +264,25 @@ const { items } = Astro.props;
     }
 
     .book-lightbox__stage {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr auto auto;
-      justify-items: stretch;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr auto;
+      grid-template-areas:
+        "figure figure"
+        "prev next";
       row-gap: var(--space-sm);
-    }
-
-    .book-lightbox__nav--prev {
-      order: 2;
-      justify-self: start;
+      column-gap: var(--space-sm);
     }
 
     .book-lightbox__figure {
-      order: 1;
       min-height: 0;
     }
 
+    .book-lightbox__nav--prev,
     .book-lightbox__nav--next {
-      order: 3;
-      justify-self: end;
+      align-self: stretch;
+      justify-self: stretch;
+      width: 100%;
+      text-align: center;
     }
   }
 </style>

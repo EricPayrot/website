@@ -5,48 +5,75 @@ const pathname = Astro.url.pathname.replace(/\/$/, "") || "/";
 ---
 
 <aside class="nav-rail" aria-label="Site">
-  <a class="nav-rail__brand" href="/book">{siteName}</a>
-  <nav class="nav-rail__nav" aria-label="Primary">
-    <ul class="nav-rail__links">
-      <li>
-        <a
-          href="/book"
-          class:list={[{
-            "is-active": pathname === "/book" || pathname.startsWith("/book/"),
-          }]}
-          aria-current={
-            pathname === "/book" || pathname.startsWith("/book/")
-              ? "page"
-              : undefined
-          }
-          data-astro-prefetch
-        >
-          Fragments - Book
-        </a>
-      </li>
-      <li>
-        <a
-          href="/about"
-          class:list={[{ "is-active": pathname === "/about" }]}
-          aria-current={pathname === "/about" ? "page" : undefined}
-          data-astro-prefetch
-        >
-          About
-        </a>
-      </li>
-      <li>
-        <a
-          href="/contact"
-          class:list={[{ "is-active": pathname === "/contact" }]}
-          aria-current={pathname === "/contact" ? "page" : undefined}
-          data-astro-prefetch
-        >
-          Contact
-        </a>
-      </li>
-    </ul>
-  </nav>
-  <div class="nav-rail__footer">
+  <div class="nav-rail__bar">
+    <a class="nav-rail__brand" href="/book">{siteName}</a>
+    <button
+      type="button"
+      class="nav-rail__toggle"
+      aria-expanded="false"
+      aria-controls="nav-rail-panel"
+      aria-label="Open menu"
+    >
+      <svg
+        class="nav-rail__toggle-icon"
+        viewBox="0 0 24 24"
+        width="24"
+        height="24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M4 7h16M4 12h16M4 17h16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div id="nav-rail-panel" class="nav-rail__panel">
+    <nav class="nav-rail__nav" aria-label="Primary">
+      <ul class="nav-rail__links">
+        <li>
+          <a
+            href="/book"
+            class:list={[{
+              "is-active": pathname === "/book" || pathname.startsWith("/book/"),
+            }]}
+            aria-current={
+              pathname === "/book" || pathname.startsWith("/book/")
+                ? "page"
+                : undefined
+            }
+            data-astro-prefetch
+          >
+            Fragments - Book
+          </a>
+        </li>
+        <li>
+          <a
+            href="/about"
+            class:list={[{ "is-active": pathname === "/about" }]}
+            aria-current={pathname === "/about" ? "page" : undefined}
+            data-astro-prefetch
+          >
+            About
+          </a>
+        </li>
+        <li>
+          <a
+            href="/contact"
+            class:list={[{ "is-active": pathname === "/contact" }]}
+            aria-current={pathname === "/contact" ? "page" : undefined}
+            data-astro-prefetch
+          >
+            Contact
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <div class="nav-rail__footer">
     <ul class="nav-rail__social" aria-label="Social">
       {
         socialLinks.map((link) => (
@@ -120,10 +147,53 @@ const pathname = Astro.url.pathname.replace(/\/$/, "") || "/";
       </div>
     </div>
   </div>
+  </div>
 </aside>
 
 <script>
   const COOKIE_NOTICE_KEY = "cookie-notice-dismissed";
+  const MOBILE_NAV_MQ = "(max-width: 767px)";
+
+  function initMobileNav() {
+    const rail = document.querySelector<HTMLElement>(".nav-rail");
+    const toggle = document.querySelector<HTMLButtonElement>(".nav-rail__toggle");
+    const panel = document.getElementById("nav-rail-panel");
+    if (!rail || !toggle || !panel || rail.dataset.navInitialized === "true") return;
+
+    rail.dataset.navInitialized = "true";
+
+    const setOpen = (open: boolean) => {
+      panel.classList.toggle("is-open", open);
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    };
+
+    const isMobile = () => window.matchMedia(MOBILE_NAV_MQ).matches;
+
+    toggle.addEventListener("click", () => {
+      setOpen(!panel.classList.contains("is-open"));
+    });
+
+    panel.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        if (isMobile()) setOpen(false);
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && panel.classList.contains("is-open")) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+
+    window.matchMedia(MOBILE_NAV_MQ).addEventListener("change", (event) => {
+      if (!event.matches) setOpen(false);
+    });
+  }
+
+  initMobileNav();
+  document.addEventListener("astro:page-load", initMobileNav);
 
   function initCookieNotice() {
     const notice = document.getElementById("nav-cookie-notice");
@@ -162,11 +232,51 @@ const pathname = Astro.url.pathname.replace(/\/$/, "") || "/";
   .nav-rail {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xl);
-    padding: var(--space-xl) var(--space-lg);
     border-right: 1px solid var(--color-border);
     background: var(--color-bg);
     min-height: 100%;
+  }
+
+  .nav-rail__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .nav-rail__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    flex: 1;
+    min-height: 0;
+  }
+
+  .nav-rail__toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .nav-rail__toggle:hover {
+    background: var(--color-code-bg);
+  }
+
+  .nav-rail__toggle:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+
+  .nav-rail__toggle-icon {
+    display: block;
   }
 
   .nav-rail__brand {
@@ -331,14 +441,48 @@ const pathname = Astro.url.pathname.replace(/\/$/, "") || "/";
 
   @media (max-width: 767px) {
     .nav-rail {
-      padding: var(--space-lg) var(--space-md);
+      position: sticky;
+      top: 0;
+      z-index: 100;
       border-right: none;
       border-bottom: 1px solid var(--color-border);
       min-height: unset;
     }
 
+    .nav-rail__bar {
+      padding: var(--space-md);
+    }
+
+    .nav-rail__toggle {
+      display: inline-flex;
+    }
+
+    .nav-rail__panel {
+      display: none;
+      gap: var(--space-lg);
+      padding: 0 var(--space-md) var(--space-lg);
+      border-top: 1px solid var(--color-border);
+      background: var(--color-bg);
+    }
+
+    .nav-rail__panel.is-open {
+      display: flex;
+    }
+
     .nav-rail__footer {
       margin-top: 0;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .nav-rail {
+      padding: var(--space-xl) var(--space-lg);
+      gap: var(--space-xl);
+    }
+
+    .nav-rail__bar {
+      flex-direction: column;
+      align-items: stretch;
     }
   }
 
