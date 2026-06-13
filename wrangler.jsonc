@@ -1,7 +1,7 @@
 {
   // Static Astro site — assets only, no Worker script, no KV bindings.
   // Match "name" to your Cloudflare project if prompted.
-  "name": "ericpayrot-website",
+  "name": "website",
   "compatibility_date": "2026-06-12",
   "assets": {
     "directory": "./dist"
